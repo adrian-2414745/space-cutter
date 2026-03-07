@@ -96,8 +96,8 @@ body {
   border: 2px solid #555;
   border-radius: 8px;
   padding: 24px;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   z-index: 100;
 }
@@ -107,18 +107,26 @@ body {
 }
 
 #config-panel h2 {
+  grid-column: 1 / -1;
   text-align: center;
   margin-bottom: 4px;
 }
 
 #config-panel label {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   font-size: 14px;
 }
 
+#config-panel label span {
+  flex: 1;
+  white-space: nowrap;
+}
+
 #config-panel input {
+  width: 80px;
   padding: 6px 10px;
   font-size: 16px;
   border: 1px solid #666;
@@ -128,7 +136,9 @@ body {
 }
 
 .config-buttons {
+  grid-column: 1 / -1;
   display: flex;
+  justify-content: center;
   gap: 12px;
 }
 
