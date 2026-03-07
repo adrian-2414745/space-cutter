@@ -60,6 +60,8 @@ function gameLoop(now) {
 
   if (gameState.state === RUNNING || gameState.state === CUTTING) {
     update(dt);
+  } else {
+    consumeKeyPress(' ');
   }
 
   render();
