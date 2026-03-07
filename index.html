@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Cutter</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-container">
+    <div id="hud">
+      <span id="score-display">100%</span>
+      <span id="timer-display">3:00</span>
+    </div>
+    <canvas id="game-canvas"></canvas>
+    <div id="controls">
+      <button id="btn-start">Start</button>
+      <button id="btn-reset">Reset</button>
+      <button id="btn-config">Config</button>
+    </div>
+  </div>
+
+  <div id="config-panel" class="hidden">
+    <h2>Configuration</h2>
+    <label>
+      Rectangle Width
+      <input type="number" id="cfg-rect-width" min="100" max="1000">
+    </label>
+    <label>
+      Rectangle Height
+      <input type="number" id="cfg-rect-height" min="100" max="800">
+    </label>
+    <div class="config-buttons">
+      <button id="btn-save-config">SAVE</button>
+      <button id="btn-reset-config">RESET</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
