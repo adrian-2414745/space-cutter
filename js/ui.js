@@ -18,6 +18,7 @@ export function initUI(resetCallback) {
 function handleStart() {
   if (gameState.state === IDLE) {
     setState(RUNNING);
+    document.getElementById('btn-start').disabled = true;
   }
 }
 
@@ -27,6 +28,7 @@ function handleReset() {
   gameState.timeRemaining = config.timerDuration;
   drawScore(gameState.score);
   drawTimer(gameState.timeRemaining);
+  document.getElementById('btn-start').disabled = false;
   if (onReset) onReset();
 }
 

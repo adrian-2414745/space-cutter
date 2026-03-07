@@ -64,8 +64,14 @@ body {
   color: #fff;
 }
 
-#btn-start:hover {
+#btn-start:hover:not(:disabled) {
   background: #00e676;
+}
+
+#btn-start:disabled {
+  background: #555;
+  color: #999;
+  cursor: default;
 }
 
 #btn-reset {
@@ -78,12 +84,12 @@ body {
 }
 
 #btn-config {
-  background: #616161;
+  background: #4d03c4;
   color: #fff;
 }
 
 #btn-config:hover {
-  background: #757575;
+  background: #6c32c9;
 }
 
 /* Config panel */
