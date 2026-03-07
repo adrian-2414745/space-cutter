@@ -6,6 +6,9 @@ const DEFAULTS = {
   scissorsBorderSpeed: 200,
   scissorsCutSpeed: 300,
   cornerSnapDistance: 8,
+  ballSpeed: 150,
+  ballRadius: 6,
+  initialBallCount: 1,
 };
 
 export const config = { ...DEFAULTS };
@@ -18,6 +21,9 @@ export function applyConfigToPanel() {
   document.getElementById('cfg-cut-speed').value = config.scissorsCutSpeed;
   document.getElementById('cfg-corner-snap').value = config.cornerSnapDistance;
   document.getElementById('cfg-win-threshold').value = config.winThreshold;
+  document.getElementById('cfg-ball-speed').value = config.ballSpeed;
+  document.getElementById('cfg-ball-radius').value = config.ballRadius;
+  document.getElementById('cfg-ball-count').value = config.initialBallCount;
 }
 
 export function resetConfigToDefaults() {
@@ -28,6 +34,9 @@ export function resetConfigToDefaults() {
   document.getElementById('cfg-cut-speed').value = DEFAULTS.scissorsCutSpeed;
   document.getElementById('cfg-corner-snap').value = DEFAULTS.cornerSnapDistance;
   document.getElementById('cfg-win-threshold').value = DEFAULTS.winThreshold;
+  document.getElementById('cfg-ball-speed').value = DEFAULTS.ballSpeed;
+  document.getElementById('cfg-ball-radius').value = DEFAULTS.ballRadius;
+  document.getElementById('cfg-ball-count').value = DEFAULTS.initialBallCount;
 }
 
 export function loadConfigFromPanel() {
@@ -45,4 +54,10 @@ export function loadConfigFromPanel() {
   config.cornerSnapDistance = Math.max(1, c || 8);
   const wt = parseInt(document.getElementById('cfg-win-threshold').value, 10);
   config.winThreshold = Math.max(1, wt || 5);
+  const bs = parseInt(document.getElementById('cfg-ball-speed').value, 10);
+  config.ballSpeed = Math.max(10, bs || 150);
+  const br = parseInt(document.getElementById('cfg-ball-radius').value, 10);
+  config.ballRadius = Math.max(2, br || 6);
+  const bc = parseInt(document.getElementById('cfg-ball-count').value, 10);
+  config.initialBallCount = Math.max(1, bc || 1);
 }

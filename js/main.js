@@ -1,11 +1,12 @@
 import { config } from './config.js';
 import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
 import { createInitialRectangle, splitRectangle } from './rectangle.js';
-import { clearCanvas, drawRectangle, drawScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine } from './renderer.js';
+import { clearCanvas, drawRectangle, drawScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawBalls } from './renderer.js';
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress } from './input.js';
 import { createScissors, updateScissorsMovement, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut } from './scissors.js';
+import { createBall, updateBall, isBallInRect } from './ball.js';
 
 const CANVAS_PADDING = 40;
 const canvas = document.getElementById('game-canvas');
@@ -20,6 +21,9 @@ resizeCanvas();
 let rect = createInitialRectangle(config, canvas.width, canvas.height);
 let scissors = createScissors(rect);
 gameState.timeRemaining = config.timerDuration;
+for (let i = 0; i < config.initialBallCount; i++) {
+  gameState.balls.push(createBall(rect, config));
+}
 
 applyConfigToPanel();
 initInput();
@@ -27,6 +31,10 @@ initUI(() => {
   resizeCanvas();
   rect = createInitialRectangle(config, canvas.width, canvas.height);
   scissors = createScissors(rect);
+  gameState.balls = [];
+  for (let i = 0; i < config.initialBallCount; i++) {
+    gameState.balls.push(createBall(rect, config));
+  }
 });
 
 drawScore(gameState.score);
@@ -65,6 +73,10 @@ function update(dt) {
     return;
   }
 
+  for (const ball of gameState.balls) {
+    updateBall(ball, rect, dt);
+  }
+
   if (gameState.state === RUNNING) {
     updateScissorsMovement(scissors, rect, dt, config);
 
@@ -79,6 +91,8 @@ function update(dt) {
       const newRect = splitRectangle(rect, scissors.cutEdge, scissors.cutPos);
       repositionScissorsAfterCut(scissors, newRect);
       rect = newRect;
+      gameState.balls = gameState.balls.filter(b => isBallInRect(b, rect));
+      gameState.balls.push(createBall(rect, config));
       gameState.score = Math.round((rect.width * rect.height) / gameState.originalArea * 10000) / 100;
       drawScore(gameState.score);
       if (gameState.score < config.winThreshold) {
@@ -93,6 +107,7 @@ function update(dt) {
 function render() {
   clearCanvas(ctx, canvas);
   drawRectangle(ctx, rect);
+  drawBalls(ctx, gameState.balls);
   drawCutLine(ctx, scissors);
   drawScissors(ctx, scissors, rect);
 

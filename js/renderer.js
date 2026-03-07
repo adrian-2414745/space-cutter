@@ -97,6 +97,15 @@ export function drawScissors(ctx, scissors, rect) {
   ctx.fill();
 }
 
+export function drawBalls(ctx, balls) {
+  ctx.fillStyle = '#ff6644';
+  for (const ball of balls) {
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 export function drawTimer(timeRemaining) {
   const minutes = Math.floor(timeRemaining / 60);
   const seconds = Math.floor(timeRemaining % 60);

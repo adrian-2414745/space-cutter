@@ -40,5 +40,5 @@ After a successful cut a new ball is added in the remaining rectangle
 ## Tester verification
 - Start game. Ball(s) bounce inside the rectangle, reflecting off walls. Timer counts down simultaneously.
 - Press P — balls freeze. Press P again — balls resume.
-- Make a cut — balls in the discarded piece disappear. Remaining balls continue bouncing in the new rectangle.
+- Make a cut — balls in the discarded piece disappear. Remaining balls continue bouncing in the new rectangle. An extra ball is added in the remaining piece.
 - Config: change ball speed, radius, initial count — behavior updates on reset.
