@@ -38,53 +38,52 @@ function getCorner(scissors, rect) {
 
 const CORNER_TRANSITIONS = {
   'top-left': [
-    { key: 'ArrowLeft',  edge: 'left',  pos: 0 },
-    { key: 'ArrowUp',    edge: 'top',   posStart: true },
+    { from: 'top',    key: 'ArrowDown',  to: 'left',   pos: 0 },
+    { from: 'left',   key: 'ArrowRight', to: 'top',    pos: 0 },
   ],
   'top-right': [
-    { key: 'ArrowRight', edge: 'right', pos: 0 },
-    { key: 'ArrowUp',    edge: 'top',   posEnd: true },
+    { from: 'top',    key: 'ArrowDown',  to: 'right',  pos: 0 },
+    { from: 'right',  key: 'ArrowLeft',  to: 'top',    pos: 'max' },
   ],
   'bottom-left': [
-    { key: 'ArrowLeft',  edge: 'left',  posEnd: true },
-    { key: 'ArrowDown',  edge: 'bottom', posStart: true },
+    { from: 'bottom', key: 'ArrowUp',    to: 'left',   pos: 'max' },
+    { from: 'left',   key: 'ArrowRight', to: 'bottom', pos: 0 },
   ],
   'bottom-right': [
-    { key: 'ArrowRight', edge: 'right', posEnd: true },
-    { key: 'ArrowDown',  edge: 'bottom', posEnd: true },
+    { from: 'bottom', key: 'ArrowUp',    to: 'right',  pos: 'max' },
+    { from: 'right',  key: 'ArrowLeft',  to: 'bottom', pos: 'max' },
   ],
 };
 
-function tryCornerTransition(scissors, rect, speed) {
+function tryCornerTransition(scissors, rect) {
   const corner = getCorner(scissors, rect);
   if (!corner) return false;
 
-  const transitions = CORNER_TRANSITIONS[corner];
-  for (const t of transitions) {
-    // Only transition if the key is pressed AND it's a different edge
-    if (isKeyDown(t.key) && t.edge !== scissors.edge) {
+  const options = CORNER_TRANSITIONS[corner];
 
-      console.log(`Transitioning from ${scissors.edge} to ${t.edge} at ${corner}`);
+  for (const transition of options) {
+    // Check if we are on the edge that allows this specific transition
+    if (scissors.edge === transition.from && isKeyDown(transition.key)) {
 
-      scissors.edge = t.edge;
+      scissors.edge = transition.to;
       const edgeLen = getEdgeLength(scissors, rect);
 
-      if (t.pos !== undefined) {
-        scissors.pos = t.pos;
-      } else if (t.posStart) {
-        scissors.pos = 0;
-      } else if (t.posEnd) {
+      // Set the new position
+      if (transition.pos === 'max') {
         scissors.pos = edgeLen;
-      }
-
-      // FIX: Nudge the scissors slightly onto the new edge
-      // so they don't oscillate back and forth every frame.
-      if (scissors.pos === 0) {
-        scissors.pos += 0.1;
       } else {
-        scissors.pos -= 0.1;
+        scissors.pos = transition.pos;
       }
 
+      // NUDGE: Move 1 pixel onto the new edge so we don't
+      // immediately trigger another transition check.
+      if (scissors.pos === 0) {
+        scissors.pos = 1;
+      } else {
+        scissors.pos = edgeLen - 1;
+      }
+
+      console.log(`Turned corner ${corner} onto ${scissors.edge} edge`);
       return true;
     }
   }
@@ -95,12 +94,12 @@ export function updateScissorsMovement(scissors, rect, dt, config) {
   const speed = config.scissorsBorderSpeed * dt;
   const edgeLen = getEdgeLength(scissors, rect);
 
-  // 1. Handle corner turning
+  // 1. Check for manual corner turns first
   if (scissors.pos <= 0 || scissors.pos >= edgeLen) {
-    if (tryCornerTransition(scissors, rect, speed)) return;
+    if (tryCornerTransition(scissors, rect)) return;
   }
 
-  // 2. Movement along current edge
+  // 2. Standard movement (Parallel to the current edge)
   let delta = 0;
   if (scissors.edge === 'top' || scissors.edge === 'bottom') {
     if (isKeyDown('ArrowLeft'))  delta -= speed;
@@ -112,12 +111,14 @@ export function updateScissorsMovement(scissors, rect, dt, config) {
 
   if (delta === 0) return;
 
+  // Apply movement with clamping
   scissors.pos = Math.max(0, Math.min(edgeLen, scissors.pos + delta));
 
-  // 3. Corner snapping (only snap if we aren't moving AWAY from the corner)
-  if (scissors.pos < config.cornerSnapDistance && delta <= 0) {
+  // 3. Magnetic Snapping
+  // Only snap if we are moving TOWARD the corner
+  if (scissors.pos < config.cornerSnapDistance && delta < 0) {
     scissors.pos = 0;
-  } else if (scissors.pos > edgeLen - config.cornerSnapDistance && delta >= 0) {
+  } else if (scissors.pos > edgeLen - config.cornerSnapDistance && delta > 0) {
     scissors.pos = edgeLen;
   }
 }
