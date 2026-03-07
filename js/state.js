@@ -12,6 +12,9 @@ export const gameState = {
   originalArea: 0,
   timeRemaining: 180,
   balls: [],
+  successfulCuts: 0,
+  failedCuts: 0,
+  finalScore: null,
 };
 
 export function setState(newState) {

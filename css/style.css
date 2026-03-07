@@ -35,6 +35,10 @@ body {
   color: #00e5ff;
 }
 
+#live-score-display {
+  color: #ffcc00;
+}
+
 #timer-display {
   color: #ffab00;
 }
@@ -131,7 +135,8 @@ body {
   white-space: nowrap;
 }
 
-#config-panel input {
+#config-panel input,
+#config-panel select {
   width: 80px;
   padding: 6px 10px;
   font-size: 16px;
@@ -139,6 +144,11 @@ body {
   border-radius: 4px;
   background: #1a1a2e;
   color: #eee;
+}
+
+#config-panel select {
+  width: 110px;
+  cursor: pointer;
 }
 
 .config-buttons {

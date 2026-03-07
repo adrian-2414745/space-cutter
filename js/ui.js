@@ -1,7 +1,7 @@
 import { gameState, setState, IDLE, RUNNING } from './state.js';
 import { config, loadConfigFromPanel, applyConfigToPanel, resetConfigToDefaults } from './config.js';
 import { createInitialRectangle } from './rectangle.js';
-import { drawScore, drawTimer } from './renderer.js';
+import { drawScore, drawLiveScore, drawTimer } from './renderer.js';
 
 let onReset = null;
 
@@ -26,7 +26,11 @@ function handleReset() {
   setState(IDLE);
   gameState.score = 100;
   gameState.timeRemaining = config.timerDuration;
+  gameState.successfulCuts = 0;
+  gameState.failedCuts = 0;
+  gameState.finalScore = null;
   drawScore(gameState.score);
+  drawLiveScore(0);
   drawTimer(gameState.timeRemaining);
   document.getElementById('btn-start').disabled = false;
   if (onReset) onReset();

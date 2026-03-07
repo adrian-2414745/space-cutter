@@ -16,6 +16,10 @@ export function drawScore(score) {
   document.getElementById('score-display').textContent = score.toFixed(2) + '%';
 }
 
+export function drawLiveScore(liveScore) {
+  document.getElementById('live-score-display').textContent = liveScore.toLocaleString();
+}
+
 export function drawPausedOverlay(ctx, canvas) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -26,30 +30,36 @@ export function drawPausedOverlay(ctx, canvas) {
   ctx.fillText('PAUSED', canvas.width / 2, canvas.height / 2);
 }
 
-export function drawGameOverMessage(ctx, canvas, score) {
+export function drawGameOverMessage(ctx, canvas, score, finalScore) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#ff4444';
   ctx.font = 'bold 48px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 30);
+  ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = 'bold 32px monospace';
+  ctx.fillText('Score: ' + (finalScore != null ? finalScore.toLocaleString() : '0'), canvas.width / 2, canvas.height / 2 + 10);
   ctx.fillStyle = '#ffffff';
-  ctx.font = '24px monospace';
-  ctx.fillText('Score: ' + score + '%', canvas.width / 2, canvas.height / 2 + 30);
+  ctx.font = '20px monospace';
+  ctx.fillText('Area: ' + score + '%', canvas.width / 2, canvas.height / 2 + 50);
 }
 
-export function drawWinMessage(ctx, canvas, score) {
+export function drawWinMessage(ctx, canvas, score, finalScore) {
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = '#00ff88';
   ctx.font = 'bold 48px monospace';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 - 30);
+  ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 - 50);
+  ctx.fillStyle = '#ffcc00';
+  ctx.font = 'bold 32px monospace';
+  ctx.fillText('Score: ' + (finalScore != null ? finalScore.toLocaleString() : '0'), canvas.width / 2, canvas.height / 2 + 10);
   ctx.fillStyle = '#ffffff';
-  ctx.font = '24px monospace';
-  ctx.fillText('Score: ' + score.toFixed(2) + '%', canvas.width / 2, canvas.height / 2 + 30);
+  ctx.font = '20px monospace';
+  ctx.fillText('Area: ' + score.toFixed(2) + '%', canvas.width / 2, canvas.height / 2 + 50);
 }
 
 export function drawCutLine(ctx, scissors) {

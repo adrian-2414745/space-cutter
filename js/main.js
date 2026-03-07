@@ -1,13 +1,14 @@
 import { config } from './config.js';
 import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
 import { createInitialRectangle, splitRectangle } from './rectangle.js';
-import { clearCanvas, drawRectangle, drawScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawBalls } from './renderer.js';
+import { clearCanvas, drawRectangle, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawBalls } from './renderer.js';
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress } from './input.js';
 import { createScissors, updateScissorsMovement, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut } from './scissors.js';
 import { createBall, updateBall, isBallInRect } from './ball.js';
 import { ballIntersectsCutLine } from './collision.js';
+import { calculateScore } from './scoring.js';
 
 const CANVAS_PADDING = 40;
 const canvas = document.getElementById('game-canvas');
@@ -69,7 +70,17 @@ function update(dt) {
   gameState.timeRemaining = Math.max(0, gameState.timeRemaining - dt);
   drawTimer(gameState.timeRemaining);
 
+  const liveScore = calculateScore(
+    gameState.score, false, gameState.timeRemaining, config.timerDuration,
+    gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
+  );
+  drawLiveScore(liveScore);
+
   if (gameState.timeRemaining <= 0) {
+    gameState.finalScore = calculateScore(
+      gameState.score, false, 0, config.timerDuration,
+      gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
+    );
     setState(GAME_OVER);
     return;
   }
@@ -89,12 +100,14 @@ function update(dt) {
     updateScissorsCut(scissors, rect, dt, config);
 
     if (checkCutCollision()) {
+      gameState.failedCuts++;
       cancelCut(scissors);
       setState(RUNNING);
       return;
     }
 
     if (checkCutComplete(scissors, rect)) {
+      gameState.successfulCuts++;
       const newRect = splitRectangle(rect, scissors.cutEdge, scissors.cutPos);
       repositionScissorsAfterCut(scissors, newRect);
       rect = newRect;
@@ -103,6 +116,10 @@ function update(dt) {
       gameState.score = Math.round((rect.width * rect.height) / gameState.originalArea * 10000) / 100;
       drawScore(gameState.score);
       if (gameState.score < config.winThreshold) {
+        gameState.finalScore = calculateScore(
+          gameState.score, true, gameState.timeRemaining, config.timerDuration,
+          gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
+        );
         setState(WIN);
         return;
       }
@@ -130,9 +147,9 @@ function render() {
   if (gameState.state === PAUSED) {
     drawPausedOverlay(ctx, canvas);
   } else if (gameState.state === GAME_OVER) {
-    drawGameOverMessage(ctx, canvas, gameState.score);
+    drawGameOverMessage(ctx, canvas, gameState.score, gameState.finalScore);
   } else if (gameState.state === WIN) {
-    drawWinMessage(ctx, canvas, gameState.score);
+    drawWinMessage(ctx, canvas, gameState.score, gameState.finalScore);
   }
 }
 

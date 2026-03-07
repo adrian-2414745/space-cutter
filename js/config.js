@@ -1,14 +1,15 @@
 const DEFAULTS = {
   rectWidth: 600,
-  rectHeight: 400,
+  rectHeight: 600,
   timerDuration: 180,
-  winThreshold: 5,
+  winThreshold: 15,
   scissorsBorderSpeed: 200,
   scissorsCutSpeed: 300,
   cornerSnapDistance: 8,
   ballSpeed: 150,
   ballRadius: 6,
-  initialBallCount: 1,
+  initialBallCount: 2,
+  failPenalty: 'low',
 };
 
 export const config = { ...DEFAULTS };
@@ -24,6 +25,7 @@ export function applyConfigToPanel() {
   document.getElementById('cfg-ball-speed').value = config.ballSpeed;
   document.getElementById('cfg-ball-radius').value = config.ballRadius;
   document.getElementById('cfg-ball-count').value = config.initialBallCount;
+  document.getElementById('cfg-fail-penalty').value = config.failPenalty;
 }
 
 export function resetConfigToDefaults() {
@@ -37,6 +39,7 @@ export function resetConfigToDefaults() {
   document.getElementById('cfg-ball-speed').value = DEFAULTS.ballSpeed;
   document.getElementById('cfg-ball-radius').value = DEFAULTS.ballRadius;
   document.getElementById('cfg-ball-count').value = DEFAULTS.initialBallCount;
+  document.getElementById('cfg-fail-penalty').value = DEFAULTS.failPenalty;
 }
 
 export function loadConfigFromPanel() {
@@ -60,4 +63,5 @@ export function loadConfigFromPanel() {
   config.ballRadius = Math.max(2, br || 6);
   const bc = parseInt(document.getElementById('cfg-ball-count').value, 10);
   config.initialBallCount = Math.max(1, bc || 1);
+  config.failPenalty = document.getElementById('cfg-fail-penalty').value;
 }
