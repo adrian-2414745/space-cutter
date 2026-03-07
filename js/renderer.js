@@ -77,7 +77,7 @@ export function drawCutLine(ctx, scissors) {
 
 export function drawScissors(ctx, scissors, rect) {
   const pos = getScissorsScreenPosition(scissors, rect);
-  const size = 10;
+  const size = 16;
 
   ctx.fillStyle = '#ffff00';
   ctx.beginPath();

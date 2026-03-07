@@ -3,7 +3,7 @@ const DEFAULTS = {
   rectHeight: 600,
   timerDuration: 180,
   winThreshold: 15,
-  scissorsBorderSpeed: 200,
+  scissorsBorderSpeed: 250,
   scissorsCutSpeed: 300,
   cornerSnapDistance: 8,
   ballSpeed: 150,
