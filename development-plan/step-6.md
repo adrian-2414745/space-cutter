@@ -1,6 +1,7 @@
 # Step 6: Bouncing Balls
 
 **Goal:** Balls bounce inside the rectangle. Balls start moving when the game is RUNNING. On cut, balls inside the discarded piece are removed.
+After a successful cut a new ball is added in the remaining rectangle
 
 **Files created:** `js/ball.js`
 **Files modified:** `js/renderer.js`, `js/main.js`, `js/state.js`, `js/config.js`, `js/ui.js`

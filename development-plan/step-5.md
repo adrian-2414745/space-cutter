@@ -7,7 +7,7 @@
 ## Tasks
 
 5.1. **Update score display**
-   - `drawScore()` already exists — ensure it displays current `gameState.score` formatted to one decimal place (e.g., "87.3%")
+   - `drawScore()` already exists — ensure it displays current `gameState.score` formatted to two decimal place (e.g., "87.31%")
 
 5.2. **Implement win check in `js/main.js`**
    - `checkWinCondition()`: if `gameState.score < config.winThreshold`, set state to WIN

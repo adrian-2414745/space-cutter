@@ -13,7 +13,7 @@ export function drawRectangle(ctx, rect) {
 }
 
 export function drawScore(score) {
-  document.getElementById('score-display').textContent = score + '%';
+  document.getElementById('score-display').textContent = score.toFixed(2) + '%';
 }
 
 export function drawPausedOverlay(ctx, canvas) {
@@ -37,6 +37,19 @@ export function drawGameOverMessage(ctx, canvas, score) {
   ctx.fillStyle = '#ffffff';
   ctx.font = '24px monospace';
   ctx.fillText('Score: ' + score + '%', canvas.width / 2, canvas.height / 2 + 30);
+}
+
+export function drawWinMessage(ctx, canvas, score) {
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#00ff88';
+  ctx.font = 'bold 48px monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2 - 30);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '24px monospace';
+  ctx.fillText('Score: ' + score.toFixed(2) + '%', canvas.width / 2, canvas.height / 2 + 30);
 }
 
 export function drawCutLine(ctx, scissors) {

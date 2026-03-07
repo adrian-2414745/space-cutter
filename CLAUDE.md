@@ -69,7 +69,7 @@ The project follows an 8-step incremental plan in `development-plan/`. Each step
 8. UI polish & animations
 
 Detailed task breakdowns are in `development-plan/step-{1-8}.md`.
-Development progress is tracked in `development-plan/progress.md`, update it after each step
+Development progress is tracked in `development-plan/progress.md`.
 
 ## Design Documents
 

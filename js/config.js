@@ -17,6 +17,7 @@ export function applyConfigToPanel() {
   document.getElementById('cfg-scissors-speed').value = config.scissorsBorderSpeed;
   document.getElementById('cfg-cut-speed').value = config.scissorsCutSpeed;
   document.getElementById('cfg-corner-snap').value = config.cornerSnapDistance;
+  document.getElementById('cfg-win-threshold').value = config.winThreshold;
 }
 
 export function resetConfigToDefaults() {
@@ -26,6 +27,7 @@ export function resetConfigToDefaults() {
   document.getElementById('cfg-scissors-speed').value = DEFAULTS.scissorsBorderSpeed;
   document.getElementById('cfg-cut-speed').value = DEFAULTS.scissorsCutSpeed;
   document.getElementById('cfg-corner-snap').value = DEFAULTS.cornerSnapDistance;
+  document.getElementById('cfg-win-threshold').value = DEFAULTS.winThreshold;
 }
 
 export function loadConfigFromPanel() {
@@ -41,4 +43,6 @@ export function loadConfigFromPanel() {
   const cs = parseInt(document.getElementById('cfg-cut-speed').value, 10);
   config.scissorsCutSpeed = Math.max(50, cs || 300);
   config.cornerSnapDistance = Math.max(1, c || 8);
+  const wt = parseInt(document.getElementById('cfg-win-threshold').value, 10);
+  config.winThreshold = Math.max(1, wt || 5);
 }

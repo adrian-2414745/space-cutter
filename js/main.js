@@ -1,7 +1,7 @@
 import { config } from './config.js';
-import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER } from './state.js';
+import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
 import { createInitialRectangle, splitRectangle } from './rectangle.js';
-import { clearCanvas, drawRectangle, drawScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawScissors, drawCutLine } from './renderer.js';
+import { clearCanvas, drawRectangle, drawScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine } from './renderer.js';
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress } from './input.js';
@@ -79,8 +79,12 @@ function update(dt) {
       const newRect = splitRectangle(rect, scissors.cutEdge, scissors.cutPos);
       repositionScissorsAfterCut(scissors, newRect);
       rect = newRect;
-      gameState.score = Math.round((rect.width * rect.height) / gameState.originalArea * 1000) / 10;
+      gameState.score = Math.round((rect.width * rect.height) / gameState.originalArea * 10000) / 100;
       drawScore(gameState.score);
+      if (gameState.score < config.winThreshold) {
+        setState(WIN);
+        return;
+      }
       setState(RUNNING);
     }
   }
@@ -96,6 +100,8 @@ function render() {
     drawPausedOverlay(ctx, canvas);
   } else if (gameState.state === GAME_OVER) {
     drawGameOverMessage(ctx, canvas, gameState.score);
+  } else if (gameState.state === WIN) {
+    drawWinMessage(ctx, canvas, gameState.score);
   }
 }
 
