@@ -17,13 +17,13 @@ Each step is independently testable. Config panel parameters are introduced alon
 
 ## Summary
 
-| Step | Feature                           | Config Params Added                                        |
-|------|-----------------------------------|------------------------------------------------------------|
-| 1    | Scaffold, rectangle, state        | Rectangle Width, Rectangle Height                          |
-| 2    | Timer, pause, game over           | Timer Duration                                             |
-| 3    | Scissors on border                | Scissors Border Speed, Corner Snap Distance                |
-| 4    | Cutting mechanic                  | Scissors Cut Speed                                         |
-| 5    | Scoring & win condition           | Win Threshold                                              |
-| 6    | Bouncing balls                    | Ball Speed, Ball Radius, Initial Ball Count                |
-| 7    | Cut-line collision & ball spawn   | (none — uses existing params)                              |
-| 8    | UI polish & animations            | (none — visual only)                                       |
+| Step | Feature                           | Config Params Added                                        | Development Status |
+|------|-----------------------------------|------------------------------------------------------------|:------------------:|
+| 1    | Scaffold, rectangle, state        | Rectangle Width, Rectangle Height                          |        Done        |
+| 2    | Timer, pause, game over           | Timer Duration                                             |        Done        |
+| 3    | Scissors on border                | Scissors Border Speed, Corner Snap Distance                |    in progress     |
+| 4    | Cutting mechanic                  | Scissors Cut Speed                                         |        Todo        |
+| 5    | Scoring & win condition           | Win Threshold                                              |        Todo        |
+| 6    | Bouncing balls                    | Ball Speed, Ball Radius, Initial Ball Count                |        Todo        |
+| 7    | Cut-line collision & ball spawn   | (none — uses existing params)                              |        Todo        |
+| 8    | UI polish & animations            | (none — visual only)                                       |        Todo        |

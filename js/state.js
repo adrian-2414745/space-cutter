@@ -7,6 +7,7 @@ export const WIN = 'WIN';
 
 export const gameState = {
   state: IDLE,
+  previousState: null,
   score: 100,
   originalArea: 0,
   timeRemaining: 180,

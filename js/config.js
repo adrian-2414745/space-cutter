@@ -3,6 +3,8 @@ const DEFAULTS = {
   rectHeight: 400,
   timerDuration: 180,
   winThreshold: 5,
+  scissorsBorderSpeed: 200,
+  cornerSnapDistance: 8,
 };
 
 export const config = { ...DEFAULTS };
@@ -10,16 +12,28 @@ export const config = { ...DEFAULTS };
 export function applyConfigToPanel() {
   document.getElementById('cfg-rect-width').value = config.rectWidth;
   document.getElementById('cfg-rect-height').value = config.rectHeight;
+  document.getElementById('cfg-timer-duration').value = config.timerDuration;
+  document.getElementById('cfg-scissors-speed').value = config.scissorsBorderSpeed;
+  document.getElementById('cfg-corner-snap').value = config.cornerSnapDistance;
 }
 
 export function resetConfigToDefaults() {
   document.getElementById('cfg-rect-width').value = DEFAULTS.rectWidth;
   document.getElementById('cfg-rect-height').value = DEFAULTS.rectHeight;
+  document.getElementById('cfg-timer-duration').value = DEFAULTS.timerDuration;
+  document.getElementById('cfg-scissors-speed').value = DEFAULTS.scissorsBorderSpeed;
+  document.getElementById('cfg-corner-snap').value = DEFAULTS.cornerSnapDistance;
 }
 
 export function loadConfigFromPanel() {
   const w = parseInt(document.getElementById('cfg-rect-width').value, 10);
   const h = parseInt(document.getElementById('cfg-rect-height').value, 10);
+  const t = parseInt(document.getElementById('cfg-timer-duration').value, 10);
   config.rectWidth = Math.max(600, w || 600);
   config.rectHeight = Math.max(400, h || 400);
+  config.timerDuration = Math.max(10, t || 180);
+  const s = parseInt(document.getElementById('cfg-scissors-speed').value, 10);
+  const c = parseInt(document.getElementById('cfg-corner-snap').value, 10);
+  config.scissorsBorderSpeed = Math.max(50, s || 200);
+  config.cornerSnapDistance = Math.max(1, c || 8);
 }
