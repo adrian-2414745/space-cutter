@@ -68,7 +68,8 @@ The project follows an 8-step incremental plan in `development-plan/`. Each step
 7. Cut-line collision & ball spawning
 8. UI polish & animations
 
-Detailed task breakdowns are in `development-plan/step-{1-8}.md`. The full plan with config parameter mapping is in `development-plan.md`.
+Detailed task breakdowns are in `development-plan/step-{1-8}.md`.
+Development progress is tracked in `development-plan/progress.md`, update it after each step
 
 ## Design Documents
 
