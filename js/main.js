@@ -5,8 +5,9 @@ import { clearCanvas, drawRectangle, drawScore, drawTimer, drawPausedOverlay, dr
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress } from './input.js';
-import { createScissors, updateScissorsMovement, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut } from './scissors.js';
+import { createScissors, updateScissorsMovement, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut } from './scissors.js';
 import { createBall, updateBall, isBallInRect } from './ball.js';
+import { ballIntersectsCutLine } from './collision.js';
 
 const CANVAS_PADDING = 40;
 const canvas = document.getElementById('game-canvas');
@@ -87,6 +88,12 @@ function update(dt) {
   } else if (gameState.state === CUTTING) {
     updateScissorsCut(scissors, rect, dt, config);
 
+    if (checkCutCollision()) {
+      cancelCut(scissors);
+      setState(RUNNING);
+      return;
+    }
+
     if (checkCutComplete(scissors, rect)) {
       const newRect = splitRectangle(rect, scissors.cutEdge, scissors.cutPos);
       repositionScissorsAfterCut(scissors, newRect);
@@ -102,6 +109,15 @@ function update(dt) {
       setState(RUNNING);
     }
   }
+}
+
+function checkCutCollision() {
+  for (const ball of gameState.balls) {
+    if (ballIntersectsCutLine(ball, scissors.cutStart, scissors.cutCurrent)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function render() {

@@ -8,5 +8,5 @@
 - [x] **Step 4** — Cutting mechanic | Config: Scissors Cut Speed | DONE
 - [x] **Step 5** — Scoring & win condition | Config: Win Threshold | DONE
 - [x] **Step 6** — Bouncing balls | Config: Ball Speed, Ball Radius, Initial Ball Count | DONE
-- [ ] **Step 7** — Cut-line collision & ball spawn | Config: (none — uses existing params) | Todo
+- [x] **Step 7** — Cut-line collision & ball spawn | Config: (none — uses existing params) | Todo
 - [ ] **Step 8** — UI polish & animations | Config: (none — visual only) | Todo

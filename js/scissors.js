@@ -55,6 +55,14 @@ export function checkCutComplete(scissors, rect) {
 
 const OPPOSITE_EDGE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
 
+export function cancelCut(scissors) {
+  scissors.cutting = false;
+  scissors.cutStart = null;
+  scissors.cutCurrent = null;
+  scissors.cutEdge = null;
+  scissors.cutPos = null;
+}
+
 export function repositionScissorsAfterCut(scissors, newRect) {
   const oppositeEdge = OPPOSITE_EDGE[scissors.cutEdge];
   scissors.edge = oppositeEdge;
