@@ -176,3 +176,12 @@ body {
 #btn-reset-config {
   background: #616161;
 }
+
+#game-description {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: #aaa;
+  text-align: center;
+}
