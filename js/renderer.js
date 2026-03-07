@@ -39,6 +39,19 @@ export function drawGameOverMessage(ctx, canvas, score) {
   ctx.fillText('Score: ' + score + '%', canvas.width / 2, canvas.height / 2 + 30);
 }
 
+export function drawCutLine(ctx, scissors) {
+  if (!scissors.cutting || !scissors.cutStart) return;
+  ctx.save();
+  ctx.setLineDash([8, 4]);
+  ctx.strokeStyle = '#ff4444';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(scissors.cutStart.x, scissors.cutStart.y);
+  ctx.lineTo(scissors.cutCurrent.x, scissors.cutCurrent.y);
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function drawScissors(ctx, scissors, rect) {
   const pos = getScissorsScreenPosition(scissors, rect);
   const size = 10;

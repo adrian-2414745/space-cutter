@@ -6,8 +6,83 @@ export function createScissors(rect) {
     pos: rect.width / 2,
     cutting: false,
     cutStart: null,
-    cutCurrent: null
+    cutCurrent: null,
+    cutEdge: null,
+    cutPos: null,
   };
+}
+
+export function isAtCorner(scissors, rect) {
+  return getCorner(scissors, rect) !== null;
+}
+
+export function initiateCut(scissors, rect) {
+  scissors.cutting = true;
+  const screenPos = getScissorsScreenPosition(scissors, rect);
+  scissors.cutStart = { x: screenPos.x, y: screenPos.y };
+  scissors.cutCurrent = { x: screenPos.x, y: screenPos.y };
+  scissors.cutEdge = scissors.edge;
+  scissors.cutPos = scissors.pos;
+}
+
+export function updateScissorsCut(scissors, rect, dt, config) {
+  const speed = config.scissorsCutSpeed * dt;
+  switch (scissors.cutEdge) {
+    case 'top':
+      scissors.cutCurrent.y = Math.min(scissors.cutCurrent.y + speed, rect.y + rect.height);
+      break;
+    case 'bottom':
+      scissors.cutCurrent.y = Math.max(scissors.cutCurrent.y - speed, rect.y);
+      break;
+    case 'left':
+      scissors.cutCurrent.x = Math.min(scissors.cutCurrent.x + speed, rect.x + rect.width);
+      break;
+    case 'right':
+      scissors.cutCurrent.x = Math.max(scissors.cutCurrent.x - speed, rect.x);
+      break;
+  }
+}
+
+export function checkCutComplete(scissors, rect) {
+  switch (scissors.cutEdge) {
+    case 'top':    return scissors.cutCurrent.y >= rect.y + rect.height;
+    case 'bottom': return scissors.cutCurrent.y <= rect.y;
+    case 'left':   return scissors.cutCurrent.x >= rect.x + rect.width;
+    case 'right':  return scissors.cutCurrent.x <= rect.x;
+  }
+  return false;
+}
+
+const OPPOSITE_EDGE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+
+export function repositionScissorsAfterCut(scissors, newRect) {
+  const oppositeEdge = OPPOSITE_EDGE[scissors.cutEdge];
+  scissors.edge = oppositeEdge;
+
+  // The cut endpoint is at a corner of the new rectangle.
+  // Determine pos based on which piece was kept.
+  const edgeLen = getEdgeLength(scissors, newRect);
+  const cutScreenPos = (scissors.cutEdge === 'top' || scissors.cutEdge === 'bottom')
+    ? scissors.cutStart.x
+    : scissors.cutStart.y;
+
+  const rectStart = (scissors.cutEdge === 'top' || scissors.cutEdge === 'bottom')
+    ? newRect.x
+    : newRect.y;
+
+  // If the new rect starts at the same position as the original, the cut is at the far end
+  // If the new rect starts at the cut position, the cut is at pos 0
+  if (Math.abs(rectStart - cutScreenPos) < 1) {
+    scissors.pos = 0;
+  } else {
+    scissors.pos = edgeLen;
+  }
+
+  scissors.cutting = false;
+  scissors.cutStart = null;
+  scissors.cutCurrent = null;
+  scissors.cutEdge = null;
+  scissors.cutPos = null;
 }
 
 export function getScissorsScreenPosition(scissors, rect) {

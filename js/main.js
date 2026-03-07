@@ -1,11 +1,11 @@
 import { config } from './config.js';
 import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER } from './state.js';
-import { createInitialRectangle } from './rectangle.js';
-import { clearCanvas, drawRectangle, drawScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawScissors } from './renderer.js';
+import { createInitialRectangle, splitRectangle } from './rectangle.js';
+import { clearCanvas, drawRectangle, drawScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawScissors, drawCutLine } from './renderer.js';
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress } from './input.js';
-import { createScissors, updateScissorsMovement } from './scissors.js';
+import { createScissors, updateScissorsMovement, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut } from './scissors.js';
 
 const CANVAS_PADDING = 40;
 const canvas = document.getElementById('game-canvas');
@@ -62,14 +62,34 @@ function update(dt) {
 
   if (gameState.timeRemaining <= 0) {
     setState(GAME_OVER);
+    return;
   }
 
-  updateScissorsMovement(scissors, rect, dt, config);
+  if (gameState.state === RUNNING) {
+    updateScissorsMovement(scissors, rect, dt, config);
+
+    if (consumeKeyPress(' ') && !isAtCorner(scissors, rect)) {
+      initiateCut(scissors, rect);
+      setState(CUTTING);
+    }
+  } else if (gameState.state === CUTTING) {
+    updateScissorsCut(scissors, rect, dt, config);
+
+    if (checkCutComplete(scissors, rect)) {
+      const newRect = splitRectangle(rect, scissors.cutEdge, scissors.cutPos);
+      repositionScissorsAfterCut(scissors, newRect);
+      rect = newRect;
+      gameState.score = Math.round((rect.width * rect.height) / gameState.originalArea * 1000) / 10;
+      drawScore(gameState.score);
+      setState(RUNNING);
+    }
+  }
 }
 
 function render() {
   clearCanvas(ctx, canvas);
   drawRectangle(ctx, rect);
+  drawCutLine(ctx, scissors);
   drawScissors(ctx, scissors, rect);
 
   if (gameState.state === PAUSED) {

@@ -19,9 +19,9 @@ Each step is independently testable. Config panel parameters are introduced alon
 
 | Step | Feature                           | Config Params Added                                        | Development Status |
 |------|-----------------------------------|------------------------------------------------------------|:------------------:|
-| 1    | Scaffold, rectangle, state        | Rectangle Width, Rectangle Height                          |        Done        |
-| 2    | Timer, pause, game over           | Timer Duration                                             |        Done        |
-| 3    | Scissors on border                | Scissors Border Speed, Corner Snap Distance                |    in progress     |
+| 1    | Scaffold, rectangle, state        | Rectangle Width, Rectangle Height                          |        DONE        |
+| 2    | Timer, pause, game over           | Timer Duration                                             |        DONE        |
+| 3    | Scissors on border                | Scissors Border Speed, Corner Snap Distance                |        DONE        |
 | 4    | Cutting mechanic                  | Scissors Cut Speed                                         |        Todo        |
 | 5    | Scoring & win condition           | Win Threshold                                              |        Todo        |
 | 6    | Bouncing balls                    | Ball Speed, Ball Radius, Initial Ball Count                |        Todo        |
