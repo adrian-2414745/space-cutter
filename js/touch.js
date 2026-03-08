@@ -5,6 +5,10 @@ let touchLastY      = 0;
 let pendingDeltaX   = 0;
 let pendingDeltaY   = 0;
 
+// Velocity tracking for frame coasting
+let touchVelocityX  = 0;     // px/ms, exponential moving average
+let lastMoveTime    = 0;
+
 // Double-tap state (used in Step 5)
 let lastTapTime     = 0;
 let lastTapX        = 0;
@@ -30,16 +34,28 @@ function onTouchStart(e) {
   touchLastY  = t.clientY;
   pendingDeltaX = 0;
   pendingDeltaY = 0;
+  touchVelocityX = 0;
+  lastMoveTime = performance.now();
 }
 
 function onTouchMove(e) {
   e.preventDefault();
   for (const t of e.changedTouches) {
     if (t.identifier !== activeId) continue;
-    pendingDeltaX += t.clientX - touchLastX;
+    const dx = t.clientX - touchLastX;
+    pendingDeltaX += dx;
     pendingDeltaY += t.clientY - touchLastY;
     touchLastX = t.clientX;
     touchLastY = t.clientY;
+
+    // Update velocity EMA (px/ms)
+    const now = performance.now();
+    const elapsed = now - lastMoveTime;
+    if (elapsed > 0) {
+      const instantV = dx / elapsed;
+      touchVelocityX = instantV * 0.6 + touchVelocityX * 0.4;
+    }
+    lastMoveTime = now;
     break;
   }
 }
@@ -49,6 +65,7 @@ function onTouchEnd(e) {
   for (const t of e.changedTouches) {
     if (t.identifier === activeId) {
       activeId = null;
+      touchVelocityX = 0;
       handleTapEnd(t);
       break;
     }
@@ -75,7 +92,7 @@ function handleTapEnd(touch) {
  * Returns accumulated touch delta since last call, then resets.
  */
 export function consumeTouchDelta() {
-  const d = { x: pendingDeltaX, y: pendingDeltaY };
+  const d = { x: pendingDeltaX, y: pendingDeltaY, vx: touchVelocityX, touching: activeId !== null };
   pendingDeltaX = 0;
   pendingDeltaY = 0;
   return d;

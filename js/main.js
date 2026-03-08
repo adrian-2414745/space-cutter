@@ -59,6 +59,12 @@ applyConfigToPanel();
 initInput();
 if (isMobile) {
   initTouch(canvas);
+  setDoubleTapCallback(() => {
+    if (gameState.state === RUNNING && !isAtCorner(scissors, rect)) {
+      initiateCut(scissors, rect);
+      setState(CUTTING);
+    }
+  });
 }
 initUI(() => {
   resizeCanvas();
@@ -80,7 +86,7 @@ function gameLoop(now) {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
 
-  if (consumeKeyPress('p') || consumeKeyPress('P')) {
+  if (!isMobile && (consumeKeyPress('p') || consumeKeyPress('P'))) {
     if (gameState.state === RUNNING || gameState.state === CUTTING) {
       gameState.previousState = gameState.state;
       setState(PAUSED);
@@ -131,7 +137,7 @@ function update(dt) {
       updateScissorsMovement(scissors, rect, dt, config);
     }
 
-    if (consumeKeyPress(' ') && !isAtCorner(scissors, rect)) {
+    if (!isMobile && consumeKeyPress(' ') && !isAtCorner(scissors, rect)) {
       initiateCut(scissors, rect);
       setState(CUTTING);
     }

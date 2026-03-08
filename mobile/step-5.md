@@ -1,4 +1,4 @@
-# Step 5 — Double-Tap to Cut
+/# Step 5 — Double-Tap to Cut
 
 ## What the Tester Verifies
 
