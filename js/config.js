@@ -12,12 +12,14 @@ const DEFAULTS = {
   ballRadius: 6,
   initialBallCount: 2,
   failPenalty: 'low',
+  touchSensitivity: 1.0,
 };
 
 const MOBILE_DEFAULTS = {
   ...DEFAULTS,
   timerDuration: 240,
   ballSpeed: 120,
+  touchSensitivity: 2.5,
 };
 
 export const config = isMobile ? { ...MOBILE_DEFAULTS } : { ...DEFAULTS };
@@ -34,6 +36,7 @@ export function applyConfigToPanel() {
   document.getElementById('cfg-ball-radius').value = config.ballRadius;
   document.getElementById('cfg-ball-count').value = config.initialBallCount;
   document.getElementById('cfg-fail-penalty').value = config.failPenalty;
+  document.getElementById('cfg-touch-sensitivity').value = config.touchSensitivity;
 }
 
 export function resetConfigToDefaults() {
@@ -66,4 +69,6 @@ export function loadConfigFromPanel() {
   const bc = parseInt(document.getElementById('cfg-ball-count').value, 10);
   config.initialBallCount = Math.max(1, bc || 1);
   config.failPenalty = document.getElementById('cfg-fail-penalty').value;
+  const ts = parseFloat(document.getElementById('cfg-touch-sensitivity').value);
+  config.touchSensitivity = Math.max(0.5, Math.min(5.0, ts || 2.5));
 }

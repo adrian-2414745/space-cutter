@@ -237,6 +237,11 @@ body {
   filter: brightness(1.2);
 }
 
+/* Desktop: hide mobile-only fields */
+.mobile-only {
+  display: none;
+}
+
 @media (max-width: 767px) {
   body {
     align-items: stretch;
@@ -284,6 +289,11 @@ body {
   /* Hide auto-computed params on mobile */
   .mobile-hidden {
     display: none;
+  }
+
+  /* Show mobile-only fields */
+  .mobile-only {
+    display: flex;
   }
 
   /* Prevent browser scroll/zoom on canvas touch */

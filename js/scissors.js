@@ -175,95 +175,51 @@ function tryCornerTransition(scissors, rect) {
 
 const DEAD_ZONE = 6; // px — minimum swipe magnitude to register movement
 
+const CW_EDGE_SIGN = { top: 1, right: 1, bottom: -1, left: -1 };
+
+const CW_NEXT = {
+  top:    { edge: 'right',  pos: 0     },
+  right:  { edge: 'bottom', pos: 'max' },
+  bottom: { edge: 'left',   pos: 'max' },
+  left:   { edge: 'top',    pos: 0     },
+};
+
+const CCW_NEXT = {
+  top:    { edge: 'left',   pos: 0     },
+  right:  { edge: 'top',    pos: 'max' },
+  bottom: { edge: 'right',  pos: 'max' },
+  left:   { edge: 'bottom', pos: 0     },
+};
+
 /**
- * Move scissors based on a touch swipe delta (called once per frame).
- * Handles corner traversal and the 8px dead zone.
+ * Move scissors around the perimeter based on horizontal swipe delta.
+ * Swipe RIGHT → clockwise, swipe LEFT → counter-clockwise.
+ * Corners are traversed automatically within the same frame.
  */
 export function updateScissorsMovementTouch(scissors, rect, config, dx, dy) {
-  // Use the edge-relevant component for dead zone, not total magnitude.
-  // Diagonal swipes still move scissors by their horizontal/vertical component.
-  const delta = getEdgeDelta(scissors.edge, dx, dy);
-  if (Math.abs(delta) < DEAD_ZONE) {
-    // Even if the edge-axis component is too small, check if we're at a corner
-    // and the perpendicular component is large enough to trigger a transition.
-    const edgeLen = getEdgeLength(scissors, rect);
-    const atStart = scissors.pos <= 0;
-    const atEnd   = scissors.pos >= edgeLen;
-    if ((atStart || atEnd) && Math.sqrt(dx * dx + dy * dy) >= DEAD_ZONE) {
-      const corner = getCorner(scissors, rect);
-      if (corner) {
-        const dominantKey = getDominantKey(scissors.edge, dx, dy);
-        const options = CORNER_TRANSITIONS[corner];
-        const transition = options.find(
-          t => t.from === scissors.edge && t.key === dominantKey
-        );
-        if (transition) {
-          scissors.edge = transition.to;
-          const newEdgeLen = getEdgeLength(scissors, rect);
-          scissors.pos = transition.pos === 'max' ? newEdgeLen : 0;
-          const newDelta = getEdgeDelta(scissors.edge, dx, dy);
-          applyTouchDelta(scissors, rect, config, newDelta);
-        }
-      }
-    }
-    return;
-  }
+  if (Math.abs(dx) < DEAD_ZONE) return;
 
+  const perimeterDelta = dx * config.touchSensitivity;
+  const sign = CW_EDGE_SIGN[scissors.edge];
   const edgeLen = getEdgeLength(scissors, rect);
-  const atStart = scissors.pos <= 0;
-  const atEnd   = scissors.pos >= edgeLen;
 
-  if (atStart || atEnd) {
-    const corner = getCorner(scissors, rect);
-    if (corner) {
-      const dominantKey = getDominantKey(scissors.edge, dx, dy);
-      const options = CORNER_TRANSITIONS[corner];
-      const transition = options.find(
-        t => t.from === scissors.edge && t.key === dominantKey
-      );
-      if (transition) {
-        scissors.edge = transition.to;
-        const newEdgeLen = getEdgeLength(scissors, rect);
-        scissors.pos = transition.pos === 'max' ? newEdgeLen : 0;
-        const newDelta = getEdgeDelta(scissors.edge, dx, dy);
-        applyTouchDelta(scissors, rect, config, newDelta);
-        return;
-      }
-    }
-    return;
+  scissors.pos += perimeterDelta * sign;
+
+  if (scissors.pos > edgeLen) {
+    const next = sign > 0 ? CW_NEXT[scissors.edge] : CCW_NEXT[scissors.edge];
+    scissors.edge = next.edge;
+    scissors.pos  = next.pos === 'max' ? getEdgeLength(scissors, rect) : 0;
+  } else if (scissors.pos < 0) {
+    const next = sign > 0 ? CCW_NEXT[scissors.edge] : CW_NEXT[scissors.edge];
+    scissors.edge = next.edge;
+    scissors.pos  = next.pos === 'max' ? getEdgeLength(scissors, rect) : 0;
   }
 
-  applyTouchDelta(scissors, rect, config, delta);
-}
-
-/** Map edge + swipe dx/dy to the matching arrow key string (dominant axis) */
-function getDominantKey(edge, dx, dy) {
-  const horizontal = Math.abs(dx) >= Math.abs(dy);
-  if (edge === 'top' || edge === 'bottom') {
-    if (!horizontal) return dy > 0 ? 'ArrowDown' : 'ArrowUp';
-    return dx > 0 ? 'ArrowRight' : 'ArrowLeft';
-  } else {
-    if (horizontal) return dx > 0 ? 'ArrowRight' : 'ArrowLeft';
-    return dy > 0 ? 'ArrowDown' : 'ArrowUp';
-  }
-}
-
-/** Extract the scalar movement delta for the current edge's axis */
-function getEdgeDelta(edge, dx, dy) {
-  if (edge === 'top' || edge === 'bottom') return dx;
-  return dy;
-}
-
-/** Apply scalar delta to scissors.pos with clamping and corner snap */
-function applyTouchDelta(scissors, rect, config, delta) {
-  const edgeLen = getEdgeLength(scissors, rect);
-  scissors.pos = Math.max(0, Math.min(edgeLen, scissors.pos + delta));
-
-  if (scissors.pos < config.cornerSnapDistance && delta < 0) {
-    scissors.pos = 0;
-  } else if (scissors.pos > edgeLen - config.cornerSnapDistance && delta > 0) {
-    scissors.pos = edgeLen;
-  }
+  // Corner snap
+  const newEdgeLen = getEdgeLength(scissors, rect);
+  const posDelta = perimeterDelta * sign;
+  if (posDelta < 0 && scissors.pos < config.cornerSnapDistance) scissors.pos = 0;
+  else if (posDelta > 0 && scissors.pos > newEdgeLen - config.cornerSnapDistance) scissors.pos = newEdgeLen;
 }
 
 export function updateScissorsMovement(scissors, rect, dt, config) {
