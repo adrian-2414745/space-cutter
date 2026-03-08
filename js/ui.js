@@ -2,6 +2,7 @@ import { gameState, setState, IDLE, RUNNING } from './state.js';
 import { config, loadConfigFromPanel, applyConfigToPanel, resetConfigToDefaults } from './config.js';
 import { createInitialRectangle } from './rectangle.js';
 import { drawScore, drawLiveScore, drawTimer } from './renderer.js';
+import { isMobile } from './mobile.js';
 
 let onReset = null;
 
@@ -13,6 +14,26 @@ export function initUI(resetCallback) {
   document.getElementById('btn-config').addEventListener('click', handleConfig);
   document.getElementById('btn-save-config').addEventListener('click', handleSaveConfig);
   document.getElementById('btn-reset-config').addEventListener('click', resetConfigToDefaults);
+
+  const btnHelp      = document.getElementById('btn-help');
+  const helpPanel    = document.getElementById('help-panel');
+  const btnCloseHelp = document.getElementById('btn-close-help');
+
+  if (!isMobile) btnHelp.style.display = 'none';
+
+  btnHelp.addEventListener('click', () => {
+    helpPanel.classList.remove('hidden');
+  });
+
+  btnCloseHelp.addEventListener('click', () => {
+    helpPanel.classList.add('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!helpPanel.classList.contains('hidden') && !helpPanel.contains(e.target) && e.target !== btnHelp) {
+      helpPanel.classList.add('hidden');
+    }
+  });
 }
 
 function handleStart() {

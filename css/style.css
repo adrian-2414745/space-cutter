@@ -185,3 +185,113 @@ body {
   color: #aaa;
   text-align: center;
 }
+
+#btn-help {
+  background: #607d8b;
+  color: #fff;
+}
+
+#btn-help:hover {
+  background: #78909c;
+}
+
+/* Help panel */
+#help-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #2a2a4a;
+  border: 2px solid #555;
+  border-radius: 8px;
+  padding: 24px;
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 100;
+  color: #eee;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+#help-panel h2 {
+  margin-top: 0;
+}
+
+#help-panel.hidden {
+  display: none;
+}
+
+#btn-close-help {
+  margin-top: 12px;
+  padding: 10px;
+  font-size: 16px;
+  font-weight: bold;
+  background: #2979ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#btn-close-help:hover {
+  filter: brightness(1.2);
+}
+
+@media (max-width: 767px) {
+  body {
+    align-items: stretch;
+    padding:
+      env(safe-area-inset-top)
+      env(safe-area-inset-right)
+      env(safe-area-inset-bottom)
+      env(safe-area-inset-left);
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  #game-container {
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    gap: 0;
+    width: 100%;
+    flex: 1;
+  }
+
+  #hud {
+    font-size: 16px;
+    gap: 16px;
+    padding: 8px 12px;
+  }
+
+  #game-description {
+    display: none;
+  }
+
+  #controls button {
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+
+  /* Single-column scrollable config panel */
+  #config-panel {
+    grid-template-columns: 1fr;
+    max-height: 80vh;
+    overflow-y: auto;
+    width: min(90vw, 400px);
+  }
+
+  /* Hide auto-computed params on mobile */
+  .mobile-hidden {
+    display: none;
+  }
+
+  /* Prevent browser scroll/zoom on canvas touch */
+  #game-canvas {
+    touch-action: none;
+  }
+
+  #help-panel {
+    width: min(90vw, 400px);
+  }
+}

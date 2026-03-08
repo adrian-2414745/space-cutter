@@ -1,3 +1,5 @@
+import { isMobile, computeMobileSizing } from './mobile.js';
+import { initTouch, consumeTouchDelta, setDoubleTapCallback } from './touch.js';
 import { config } from './config.js';
 import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
 import { createInitialRectangle, splitRectangle } from './rectangle.js';
@@ -5,21 +7,47 @@ import { clearCanvas, drawRectangle, drawScore, drawLiveScore, drawTimer, drawPa
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress } from './input.js';
-import { createScissors, updateScissorsMovement, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut } from './scissors.js';
+import { createScissors, updateScissorsMovement, updateScissorsMovementTouch, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut } from './scissors.js';
 import { createBall, updateBall, isBallInRect } from './ball.js';
 import { ballIntersectsCutLine } from './collision.js';
 import { calculateScore } from './scoring.js';
 
+console.log('isMobile:', isMobile);
+
 const CANVAS_PADDING = 40;
+const MOBILE_CANVAS_PADDING = 16;
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
+let mobileSizing = null;
+
 function resizeCanvas() {
-  canvas.width = Math.max(600, config.rectWidth + CANVAS_PADDING * 2);
-  canvas.height = Math.max(400, config.rectHeight + CANVAS_PADDING * 2);
+  if (isMobile) {
+    const hud      = document.getElementById('hud');
+    const controls = document.getElementById('controls');
+    const hudH     = hud.getBoundingClientRect().height  || 44;
+    const ctrlH    = controls.getBoundingClientRect().height || 52;
+    const gaps     = 16;
+
+    canvas.width  = window.innerWidth;
+    canvas.height = Math.max(200, window.innerHeight - hudH - ctrlH - gaps);
+
+    config.rectWidth  = canvas.width  - MOBILE_CANVAS_PADDING * 2;
+    config.rectHeight = canvas.height - MOBILE_CANVAS_PADDING * 2;
+  } else {
+    canvas.width  = Math.max(600, config.rectWidth  + CANVAS_PADDING * 2);
+    canvas.height = Math.max(400, config.rectHeight + CANVAS_PADDING * 2);
+  }
+}
+
+function applyMobileSizing() {
+  if (!isMobile) return;
+  mobileSizing = computeMobileSizing(config.rectWidth);
+  config.cornerSnapDistance = mobileSizing.cornerSnapPx;
 }
 
 resizeCanvas();
+applyMobileSizing();
 let rect = createInitialRectangle(config, canvas.width, canvas.height);
 let scissors = createScissors(rect);
 gameState.timeRemaining = config.timerDuration;
@@ -29,8 +57,12 @@ for (let i = 0; i < config.initialBallCount; i++) {
 
 applyConfigToPanel();
 initInput();
+if (isMobile) {
+  initTouch(canvas);
+}
 initUI(() => {
   resizeCanvas();
+  applyMobileSizing();
   rect = createInitialRectangle(config, canvas.width, canvas.height);
   scissors = createScissors(rect);
   gameState.balls = [];
@@ -92,13 +124,19 @@ function update(dt) {
   }
 
   if (gameState.state === RUNNING) {
-    updateScissorsMovement(scissors, rect, dt, config);
+    if (isMobile) {
+      const { x: tdx, y: tdy } = consumeTouchDelta();
+      updateScissorsMovementTouch(scissors, rect, config, tdx, tdy);
+    } else {
+      updateScissorsMovement(scissors, rect, dt, config);
+    }
 
     if (consumeKeyPress(' ') && !isAtCorner(scissors, rect)) {
       initiateCut(scissors, rect);
       setState(CUTTING);
     }
   } else if (gameState.state === CUTTING) {
+    if (isMobile) consumeTouchDelta(); // drain to prevent accumulated delta after cut ends
     updateScissorsCut(scissors, rect, dt, config);
 
     if (checkCutCollision()) {

@@ -1,3 +1,5 @@
+import { isMobile } from './mobile.js';
+
 const DEFAULTS = {
   rectWidth: 600,
   rectHeight: 600,
@@ -12,7 +14,13 @@ const DEFAULTS = {
   failPenalty: 'low',
 };
 
-export const config = { ...DEFAULTS };
+const MOBILE_DEFAULTS = {
+  ...DEFAULTS,
+  timerDuration: 240,
+  ballSpeed: 120,
+};
+
+export const config = isMobile ? { ...MOBILE_DEFAULTS } : { ...DEFAULTS };
 
 export function applyConfigToPanel() {
   document.getElementById('cfg-rect-width').value = config.rectWidth;
@@ -29,25 +37,19 @@ export function applyConfigToPanel() {
 }
 
 export function resetConfigToDefaults() {
-  document.getElementById('cfg-rect-width').value = DEFAULTS.rectWidth;
-  document.getElementById('cfg-rect-height').value = DEFAULTS.rectHeight;
-  document.getElementById('cfg-timer-duration').value = DEFAULTS.timerDuration;
-  document.getElementById('cfg-scissors-speed').value = DEFAULTS.scissorsBorderSpeed;
-  document.getElementById('cfg-cut-speed').value = DEFAULTS.scissorsCutSpeed;
-  document.getElementById('cfg-corner-snap').value = DEFAULTS.cornerSnapDistance;
-  document.getElementById('cfg-win-threshold').value = DEFAULTS.winThreshold;
-  document.getElementById('cfg-ball-speed').value = DEFAULTS.ballSpeed;
-  document.getElementById('cfg-ball-radius').value = DEFAULTS.ballRadius;
-  document.getElementById('cfg-ball-count').value = DEFAULTS.initialBallCount;
-  document.getElementById('cfg-fail-penalty').value = DEFAULTS.failPenalty;
+  const defaults = isMobile ? MOBILE_DEFAULTS : DEFAULTS;
+  Object.assign(config, defaults);
+  applyConfigToPanel();
 }
 
 export function loadConfigFromPanel() {
   const w = parseInt(document.getElementById('cfg-rect-width').value, 10);
   const h = parseInt(document.getElementById('cfg-rect-height').value, 10);
   const t = parseInt(document.getElementById('cfg-timer-duration').value, 10);
-  config.rectWidth = Math.max(600, w || 600);
-  config.rectHeight = Math.max(400, h || 400);
+  if (!isMobile) {
+    config.rectWidth = Math.max(600, w || 600);
+    config.rectHeight = Math.max(400, h || 400);
+  }
   config.timerDuration = Math.max(10, t || 180);
   const s = parseInt(document.getElementById('cfg-scissors-speed').value, 10);
   const c = parseInt(document.getElementById('cfg-corner-snap').value, 10);

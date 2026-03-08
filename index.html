@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Space Cutter</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
@@ -18,6 +18,7 @@
       <button id="btn-start">Start</button>
       <button id="btn-reset">Reset</button>
       <button id="btn-config">Config</button>
+      <button id="btn-help">?</button>
     </div>
     <div id="game-description">
       <span>Objective: cut as much as possible, as fast as possible, without intersecting the balls during cutting.</span>
@@ -29,13 +30,23 @@
     </div>
   </div>
 
+  <div id="help-panel" class="hidden">
+    <h2>How to Play</h2>
+    <p><strong>Goal:</strong> Slice the rectangle down to under 15% of its original size before the timer runs out.</p>
+    <p><strong>Move scissors:</strong> Swipe on the canvas — scissors follow your finger 1:1 along the border.</p>
+    <p><strong>Cut:</strong> Double-tap the canvas to initiate a cut from the scissors' current position.</p>
+    <p><strong>Avoid balls:</strong> If a ball touches the cut line, the cut fails and scissors reset.</p>
+    <p><strong>Scoring:</strong> Each successful cut scores points. Smaller slices = more points.</p>
+    <button id="btn-close-help">Close</button>
+  </div>
+
   <div id="config-panel" class="hidden">
     <h2>Configuration</h2>
-    <label>
+    <label class="mobile-hidden">
       <span>Rectangle Width</span>
       <input type="number" id="cfg-rect-width" min="100" max="1000">
     </label>
-    <label>
+    <label class="mobile-hidden">
       <span>Rectangle Height</span>
       <input type="number" id="cfg-rect-height" min="100" max="800">
     </label>
@@ -63,7 +74,7 @@
       <span>Ball Speed</span>
       <input type="number" id="cfg-ball-speed" min="10" max="1000">
     </label>
-    <label>
+    <label class="mobile-hidden">
       <span>Ball Radius</span>
       <input type="number" id="cfg-ball-radius" min="2" max="50">
     </label>
