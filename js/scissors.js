@@ -173,7 +173,7 @@ function tryCornerTransition(scissors, rect) {
   return false;
 }
 
-const DEAD_ZONE = 8; // px — minimum swipe magnitude to register movement
+const DEAD_ZONE = 6; // px — minimum swipe magnitude to register movement
 
 /**
  * Move scissors based on a touch swipe delta (called once per frame).
