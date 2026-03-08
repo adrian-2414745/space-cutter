@@ -173,7 +173,7 @@ function tryCornerTransition(scissors, rect) {
   return false;
 }
 
-const DEAD_ZONE = 6; // px — minimum swipe magnitude to register movement
+const DEAD_ZONE = 0; // px — minimum swipe magnitude to register movement
 
 const CW_EDGE_SIGN = { top: 1, right: 1, bottom: -1, left: -1 };
 
