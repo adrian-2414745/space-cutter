@@ -1,15 +1,26 @@
-import { getScissorsScreenPosition } from './scissors.js';
+import { getScissorsScreenPosition, getPreviewLine } from './scissors.js';
+import { edgeDirection } from './polygon.js';
 
 export function clearCanvas(ctx, canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-export function drawRectangle(ctx, rect) {
+export function drawPolygon(ctx, poly) {
   ctx.fillStyle = '#16213e';
-  ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+  ctx.beginPath();
+  for (let i = 0; i < poly.vertices.length; i++) {
+    const v = poly.vertices[i];
+    if (i === 0) {
+      ctx.moveTo(v.x, v.y);
+    } else {
+      ctx.lineTo(v.x, v.y);
+    }
+  }
+  ctx.closePath();
+  ctx.fill();
   ctx.strokeStyle = '#00e5ff';
   ctx.lineWidth = 2;
-  ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+  ctx.stroke();
 }
 
 export function drawScore(score) {
@@ -70,34 +81,55 @@ export function drawCutLine(ctx, scissors) {
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(scissors.cutStart.x, scissors.cutStart.y);
+  if (scissors.cutTurn) {
+    ctx.lineTo(scissors.cutTurn.x, scissors.cutTurn.y);
+  }
   ctx.lineTo(scissors.cutCurrent.x, scissors.cutCurrent.y);
   ctx.stroke();
   ctx.restore();
 }
 
-export function drawScissors(ctx, scissors, rect) {
-  const pos = getScissorsScreenPosition(scissors, rect);
+export function drawPreviewLine(ctx, scissors, poly) {
+  if (!scissors.cutting) return;
+  const preview = getPreviewLine(scissors, poly);
+  if (!preview || preview.length === 0) return;
+  ctx.save();
+  ctx.setLineDash([4, 8]);
+  ctx.strokeStyle = 'rgba(255, 68, 68, 0.35)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(preview[0].x, preview[0].y);
+  for (let i = 1; i < preview.length; i++) {
+    ctx.lineTo(preview[i].x, preview[i].y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function drawScissors(ctx, scissors, poly) {
+  const pos = getScissorsScreenPosition(scissors, poly);
   const size = 16;
+  const dir = edgeDirection(poly, scissors.edgeIndex);
 
   ctx.fillStyle = '#ffff00';
   ctx.beginPath();
-  switch (scissors.edge) {
-    case 'top':
+  switch (dir) {
+    case 'down':
       ctx.moveTo(pos.x - size / 2, pos.y);
       ctx.lineTo(pos.x + size / 2, pos.y);
       ctx.lineTo(pos.x, pos.y + size);
       break;
-    case 'bottom':
+    case 'up':
       ctx.moveTo(pos.x - size / 2, pos.y);
       ctx.lineTo(pos.x + size / 2, pos.y);
       ctx.lineTo(pos.x, pos.y - size);
       break;
-    case 'left':
+    case 'right':
       ctx.moveTo(pos.x, pos.y - size / 2);
       ctx.lineTo(pos.x, pos.y + size / 2);
       ctx.lineTo(pos.x + size, pos.y);
       break;
-    case 'right':
+    case 'left':
       ctx.moveTo(pos.x, pos.y - size / 2);
       ctx.lineTo(pos.x, pos.y + size / 2);
       ctx.lineTo(pos.x - size, pos.y);

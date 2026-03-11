@@ -1,256 +1,363 @@
 import { isKeyDown } from './input.js';
+import { edgeLength, edgeDirection, pointOnEdge, raycastToEdge, getEdges, findEdgeAtPoint } from './polygon.js';
 
-export function createScissors(rect) {
+// ---------------------------------------------------------------------------
+// Helper: determine movement axis and sign for a polygon edge
+// ---------------------------------------------------------------------------
+
+function edgeMovementAxis(poly, edgeIndex) {
+  const verts = poly.vertices;
+  const a = verts[edgeIndex];
+  const b = verts[(edgeIndex + 1) % verts.length];
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    return { axis: 'x', sign: dx > 0 ? 1 : -1 };
+  } else {
+    return { axis: 'y', sign: dy > 0 ? 1 : -1 };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Direction helpers
+// ---------------------------------------------------------------------------
+
+const DIR_VECTORS = {
+  up:    { x:  0, y: -1 },
+  down:  { x:  0, y:  1 },
+  left:  { x: -1, y:  0 },
+  right: { x:  1, y:  0 },
+};
+
+function perpendiculars(dir) {
+  if (dir === 'up' || dir === 'down') return ['left', 'right'];
+  return ['up', 'down'];
+}
+
+// ---------------------------------------------------------------------------
+// 1. createScissors
+// ---------------------------------------------------------------------------
+
+export function createScissors(poly) {
   return {
-    edge: 'top',
-    pos: rect.width / 2,
+    edgeIndex: 0,
+    pos: edgeLength(poly, 0) / 2,
     cutting: false,
+    cutPhase: 0,
     cutStart: null,
     cutCurrent: null,
-    cutEdge: null,
-    cutPos: null,
+    cutTurn: null,
+    cutTarget: null,
+    cutDirection: null,
+    cutTurnDirection: null,
   };
 }
 
-export function isAtCorner(scissors, rect) {
-  return getCorner(scissors, rect) !== null;
+// ---------------------------------------------------------------------------
+// 2. isAtCorner
+// ---------------------------------------------------------------------------
+
+export function isAtCorner(scissors, poly) {
+  const len = edgeLength(poly, scissors.edgeIndex);
+  return scissors.pos <= 0 || scissors.pos >= len;
 }
 
-export function initiateCut(scissors, rect) {
+// ---------------------------------------------------------------------------
+// 3. initiateCut
+// ---------------------------------------------------------------------------
+
+export function initiateCut(scissors, poly) {
   scissors.cutting = true;
-  const screenPos = getScissorsScreenPosition(scissors, rect);
+  scissors.cutPhase = 1;
+  scissors.cutDirection = edgeDirection(poly, scissors.edgeIndex);
+  const screenPos = getScissorsScreenPosition(scissors, poly);
   scissors.cutStart = { x: screenPos.x, y: screenPos.y };
   scissors.cutCurrent = { x: screenPos.x, y: screenPos.y };
-  scissors.cutEdge = scissors.edge;
-  scissors.cutPos = scissors.pos;
+  scissors.cutTurn = null;
+  scissors.cutTarget = null;
+  scissors.cutTurnDirection = null;
 }
 
-export function updateScissorsCut(scissors, rect, dt, config) {
+// ---------------------------------------------------------------------------
+// 4. updateScissorsCut
+// ---------------------------------------------------------------------------
+
+export function updateScissorsCut(scissors, poly, dt, config) {
   const speed = config.scissorsCutSpeed * dt;
-  switch (scissors.cutEdge) {
-    case 'top':
-      scissors.cutCurrent.y = Math.min(scissors.cutCurrent.y + speed, rect.y + rect.height);
-      break;
-    case 'bottom':
-      scissors.cutCurrent.y = Math.max(scissors.cutCurrent.y - speed, rect.y);
-      break;
-    case 'left':
-      scissors.cutCurrent.x = Math.min(scissors.cutCurrent.x + speed, rect.x + rect.width);
-      break;
-    case 'right':
-      scissors.cutCurrent.x = Math.max(scissors.cutCurrent.x - speed, rect.x);
-      break;
+
+  if (scissors.cutPhase === 1) {
+    const v = DIR_VECTORS[scissors.cutDirection];
+    scissors.cutCurrent.x += v.x * speed;
+    scissors.cutCurrent.y += v.y * speed;
+  } else if (scissors.cutPhase === 2) {
+    const v = DIR_VECTORS[scissors.cutTurnDirection];
+    const target = scissors.cutTarget;
+    const dx = target.x - scissors.cutCurrent.x;
+    const dy = target.y - scissors.cutCurrent.y;
+    const remaining = Math.hypot(dx, dy);
+
+    if (remaining <= speed) {
+      // Clamp to target
+      scissors.cutCurrent.x = target.x;
+      scissors.cutCurrent.y = target.y;
+    } else {
+      scissors.cutCurrent.x += v.x * speed;
+      scissors.cutCurrent.y += v.y * speed;
+    }
   }
 }
 
-export function checkCutComplete(scissors, rect) {
-  switch (scissors.cutEdge) {
-    case 'top':    return scissors.cutCurrent.y >= rect.y + rect.height;
-    case 'bottom': return scissors.cutCurrent.y <= rect.y;
-    case 'left':   return scissors.cutCurrent.x >= rect.x + rect.width;
-    case 'right':  return scissors.cutCurrent.x <= rect.x;
+// ---------------------------------------------------------------------------
+// 5. triggerPhase2 (NEW)
+// ---------------------------------------------------------------------------
+
+export function triggerPhase2(scissors, poly) {
+  scissors.cutTurn = { x: scissors.cutCurrent.x, y: scissors.cutCurrent.y };
+
+  const perps = perpendiculars(scissors.cutDirection);
+  let bestDir = null;
+  let bestDist = Infinity;
+  let bestPoint = null;
+
+  for (const dir of perps) {
+    const hit = raycastToEdge(scissors.cutCurrent.x, scissors.cutCurrent.y, dir, poly);
+    if (hit && hit.distance < bestDist) {
+      bestDist = hit.distance;
+      bestDir = dir;
+      bestPoint = hit.point;
+    }
   }
-  return false;
+
+  if (!bestDir) return; // shouldn't happen in well-formed polygon
+
+  scissors.cutTurnDirection = bestDir;
+  scissors.cutTarget = bestPoint;
+  scissors.cutPhase = 2;
 }
 
-const OPPOSITE_EDGE = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+// ---------------------------------------------------------------------------
+// 6. checkCutComplete
+// ---------------------------------------------------------------------------
+
+export function checkCutComplete(scissors) {
+  if (scissors.cutPhase !== 2) return false;
+  const dx = scissors.cutCurrent.x - scissors.cutTarget.x;
+  const dy = scissors.cutCurrent.y - scissors.cutTarget.y;
+  return Math.hypot(dx, dy) < 1;
+}
+
+// ---------------------------------------------------------------------------
+// 7. cancelCut
+// ---------------------------------------------------------------------------
 
 export function cancelCut(scissors) {
   scissors.cutting = false;
+  scissors.cutPhase = 0;
   scissors.cutStart = null;
   scissors.cutCurrent = null;
-  scissors.cutEdge = null;
-  scissors.cutPos = null;
+  scissors.cutTurn = null;
+  scissors.cutTarget = null;
+  scissors.cutDirection = null;
+  scissors.cutTurnDirection = null;
 }
 
-export function repositionScissorsAfterCut(scissors, newRect) {
-  const oppositeEdge = OPPOSITE_EDGE[scissors.cutEdge];
-  scissors.edge = oppositeEdge;
+// ---------------------------------------------------------------------------
+// 8. getCutDepth
+// ---------------------------------------------------------------------------
 
-  // The cut endpoint is at a corner of the new rectangle.
-  // Determine pos based on which piece was kept.
-  const edgeLen = getEdgeLength(scissors, newRect);
-  const cutScreenPos = (scissors.cutEdge === 'top' || scissors.cutEdge === 'bottom')
-    ? scissors.cutStart.x
-    : scissors.cutStart.y;
-
-  const rectStart = (scissors.cutEdge === 'top' || scissors.cutEdge === 'bottom')
-    ? newRect.x
-    : newRect.y;
-
-  // If the new rect starts at the same position as the original, the cut is at the far end
-  // If the new rect starts at the cut position, the cut is at pos 0
-  if (Math.abs(rectStart - cutScreenPos) < 1) {
-    scissors.pos = 0;
-  } else {
-    scissors.pos = edgeLen;
-  }
-
-  scissors.cutting = false;
-  scissors.cutStart = null;
-  scissors.cutCurrent = null;
-  scissors.cutEdge = null;
-  scissors.cutPos = null;
+export function getCutDepth(scissors, poly) {
+  if (!scissors.cutStart || !scissors.cutCurrent) return 0;
+  return Math.hypot(
+    scissors.cutCurrent.x - scissors.cutStart.x,
+    scissors.cutCurrent.y - scissors.cutStart.y
+  );
 }
 
-export function getScissorsScreenPosition(scissors, rect) {
-  switch (scissors.edge) {
-    case 'top':    return { x: rect.x + scissors.pos, y: rect.y };
-    case 'bottom': return { x: rect.x + scissors.pos, y: rect.y + rect.height };
-    case 'left':   return { x: rect.x, y: rect.y + scissors.pos };
-    case 'right':  return { x: rect.x + rect.width, y: rect.y + scissors.pos };
-  }
+// ---------------------------------------------------------------------------
+// 9. canCompleteCut
+// ---------------------------------------------------------------------------
+
+export function canCompleteCut(scissors, poly, config) {
+  return scissors.cutPhase === 1 && getCutDepth(scissors, poly) >= config.minCutDepth;
 }
 
-function getEdgeLength(scissors, rect) {
-  return (scissors.edge === 'top' || scissors.edge === 'bottom') ? rect.width : rect.height;
-}
+// ---------------------------------------------------------------------------
+// 10. getPreviewLine
+// ---------------------------------------------------------------------------
 
-function getCorner(scissors, rect) {
-  const edgeLen = getEdgeLength(scissors, rect);
-  if (scissors.pos !== 0 && scissors.pos !== edgeLen) return null;
+export function getPreviewLine(scissors, poly) {
+  if (!scissors.cutting) return null;
 
-  const atStart = scissors.pos === 0;
-  switch (scissors.edge) {
-    case 'top':    return atStart ? 'top-left' : 'top-right';
-    case 'bottom': return atStart ? 'bottom-left' : 'bottom-right';
-    case 'left':   return atStart ? 'top-left' : 'bottom-left';
-    case 'right':  return atStart ? 'top-right' : 'bottom-right';
-  }
-}
+  if (scissors.cutPhase === 1) {
+    // Predict the L-path:
+    // 1) From cutCurrent, raycast in cutDirection to find opposite boundary
+    const projectedHit = raycastToEdge(
+      scissors.cutCurrent.x, scissors.cutCurrent.y,
+      scissors.cutDirection, poly
+    );
+    const projectedTurn = projectedHit
+      ? projectedHit.point
+      : { x: scissors.cutCurrent.x, y: scissors.cutCurrent.y };
 
-const CORNER_TRANSITIONS = {
-  'top-left': [
-    { from: 'top',    key: 'ArrowDown',  to: 'left',   pos: 0 },
-    { from: 'left',   key: 'ArrowRight', to: 'top',    pos: 0 },
-  ],
-  'top-right': [
-    { from: 'top',    key: 'ArrowDown',  to: 'right',  pos: 0 },
-    { from: 'right',  key: 'ArrowLeft',  to: 'top',    pos: 'max' },
-  ],
-  'bottom-left': [
-    { from: 'bottom', key: 'ArrowUp',    to: 'left',   pos: 'max' },
-    { from: 'left',   key: 'ArrowRight', to: 'bottom', pos: 0 },
-  ],
-  'bottom-right': [
-    { from: 'bottom', key: 'ArrowUp',    to: 'right',  pos: 'max' },
-    { from: 'right',  key: 'ArrowLeft',  to: 'bottom', pos: 'max' },
-  ],
-};
+    // 2) From that projected turn, raycast both perpendiculars, pick closer
+    const perps = perpendiculars(scissors.cutDirection);
+    let bestPoint = null;
+    let bestDist = Infinity;
 
-function tryCornerTransition(scissors, rect) {
-  const corner = getCorner(scissors, rect);
-  if (!corner) return false;
-
-  const options = CORNER_TRANSITIONS[corner];
-
-  for (const transition of options) {
-    // Check if we are on the edge that allows this specific transition
-    if (scissors.edge === transition.from && isKeyDown(transition.key)) {
-
-      scissors.edge = transition.to;
-      const edgeLen = getEdgeLength(scissors, rect);
-
-      // Set the new position
-      if (transition.pos === 'max') {
-        scissors.pos = edgeLen;
-      } else {
-        scissors.pos = transition.pos;
+    for (const dir of perps) {
+      const hit = raycastToEdge(projectedTurn.x, projectedTurn.y, dir, poly);
+      if (hit && hit.distance < bestDist) {
+        bestDist = hit.distance;
+        bestPoint = hit.point;
       }
-
-      // NUDGE: Move 1 pixel onto the new edge so we don't
-      // immediately trigger another transition check.
-      if (scissors.pos === 0) {
-        scissors.pos = 1;
-      } else {
-        scissors.pos = edgeLen - 1;
-      }
-
-      console.log(`Turned corner ${corner} onto ${scissors.edge} edge`);
-      return true;
     }
+
+    const projectedTarget = bestPoint || { x: projectedTurn.x, y: projectedTurn.y };
+
+    return [
+      { x: scissors.cutStart.x, y: scissors.cutStart.y },
+      { x: scissors.cutCurrent.x, y: scissors.cutCurrent.y },
+      { x: projectedTurn.x, y: projectedTurn.y },
+      { x: projectedTarget.x, y: projectedTarget.y },
+    ];
   }
-  return false;
+
+  if (scissors.cutPhase === 2) {
+    return [
+      { x: scissors.cutStart.x, y: scissors.cutStart.y },
+      { x: scissors.cutTurn.x, y: scissors.cutTurn.y },
+      { x: scissors.cutCurrent.x, y: scissors.cutCurrent.y },
+    ];
+  }
+
+  return null;
 }
 
-const DEAD_ZONE = 0; // px — minimum swipe magnitude to register movement
+// ---------------------------------------------------------------------------
+// 11. repositionScissorsAfterCut
+// ---------------------------------------------------------------------------
 
-const CW_EDGE_SIGN = { top: 1, right: 1, bottom: -1, left: -1 };
-
-const CW_NEXT = {
-  top:    { edge: 'right',  pos: 0     },
-  right:  { edge: 'bottom', pos: 'max' },
-  bottom: { edge: 'left',   pos: 'max' },
-  left:   { edge: 'top',    pos: 0     },
-};
-
-const CCW_NEXT = {
-  top:    { edge: 'left',   pos: 0     },
-  right:  { edge: 'top',    pos: 'max' },
-  bottom: { edge: 'right',  pos: 'max' },
-  left:   { edge: 'bottom', pos: 0     },
-};
-
-/**
- * Move scissors around the perimeter based on horizontal swipe delta.
- * Swipe RIGHT → clockwise, swipe LEFT → counter-clockwise.
- * Corners are traversed automatically within the same frame.
- */
-export function updateScissorsMovementTouch(scissors, rect, config, dx, dy) {
-  if (Math.abs(dx) < DEAD_ZONE) return;
-
-  const perimeterDelta = dx * config.touchSensitivity;
-  const sign = CW_EDGE_SIGN[scissors.edge];
-  const edgeLen = getEdgeLength(scissors, rect);
-
-  scissors.pos += perimeterDelta * sign;
-
-  if (scissors.pos > edgeLen) {
-    const next = sign > 0 ? CW_NEXT[scissors.edge] : CCW_NEXT[scissors.edge];
-    scissors.edge = next.edge;
-    scissors.pos  = next.pos === 'max' ? getEdgeLength(scissors, rect) : 0;
-  } else if (scissors.pos < 0) {
-    const next = sign > 0 ? CCW_NEXT[scissors.edge] : CW_NEXT[scissors.edge];
-    scissors.edge = next.edge;
-    scissors.pos  = next.pos === 'max' ? getEdgeLength(scissors, rect) : 0;
-  }
-
-  // Corner snap
-  const newEdgeLen = getEdgeLength(scissors, rect);
-  const posDelta = perimeterDelta * sign;
-  if (posDelta < 0 && scissors.pos < config.cornerSnapDistance) scissors.pos = 0;
-  else if (posDelta > 0 && scissors.pos > newEdgeLen - config.cornerSnapDistance) scissors.pos = newEdgeLen;
-}
-
-export function updateScissorsMovement(scissors, rect, dt, config) {
-  const speed = config.scissorsBorderSpeed * dt;
-  const edgeLen = getEdgeLength(scissors, rect);
-
-  // 1. Check for manual corner turns first
-  if (scissors.pos <= 0 || scissors.pos >= edgeLen) {
-    if (tryCornerTransition(scissors, rect)) return;
-  }
-
-  // 2. Standard movement (Parallel to the current edge)
-  let delta = 0;
-  if (scissors.edge === 'top' || scissors.edge === 'bottom') {
-    if (isKeyDown('ArrowLeft'))  delta -= speed;
-    if (isKeyDown('ArrowRight')) delta += speed;
+export function repositionScissorsAfterCut(scissors, poly) {
+  // Place scissors at cutTurn (point B) on whatever edge it now lies on
+  if (scissors.cutTurn) {
+    const edgeIdx = findEdgeAtPoint(poly, scissors.cutTurn.x, scissors.cutTurn.y);
+    if (edgeIdx !== -1) {
+      scissors.edgeIndex = edgeIdx;
+      const verts = poly.vertices;
+      const a = verts[edgeIdx];
+      scissors.pos = Math.hypot(
+        scissors.cutTurn.x - a.x,
+        scissors.cutTurn.y - a.y
+      );
+    } else {
+      // Fallback: put at middle of edge 0
+      scissors.edgeIndex = 0;
+      scissors.pos = edgeLength(poly, 0) / 2;
+    }
   } else {
-    if (isKeyDown('ArrowUp'))   delta -= speed;
-    if (isKeyDown('ArrowDown')) delta += speed;
+    scissors.edgeIndex = 0;
+    scissors.pos = edgeLength(poly, 0) / 2;
+  }
+
+  // Reset cut state
+  cancelCut(scissors);
+}
+
+// ---------------------------------------------------------------------------
+// 12. getScissorsScreenPosition
+// ---------------------------------------------------------------------------
+
+export function getScissorsScreenPosition(scissors, poly) {
+  return pointOnEdge(poly, scissors.edgeIndex, scissors.pos);
+}
+
+// ---------------------------------------------------------------------------
+// 13. updateScissorsMovement (keyboard)
+// ---------------------------------------------------------------------------
+
+export function updateScissorsMovement(scissors, poly, dt, config) {
+  const speed = config.scissorsBorderSpeed * dt;
+  const len = edgeLength(poly, scissors.edgeIndex);
+  const n = poly.vertices.length;
+  const { axis, sign } = edgeMovementAxis(poly, scissors.edgeIndex);
+
+  // Determine delta from arrow keys
+  let delta = 0;
+  if (axis === 'x') {
+    // Horizontal edge: ArrowRight = positive x, ArrowLeft = negative x
+    if (isKeyDown('ArrowRight')) delta += sign * speed;
+    if (isKeyDown('ArrowLeft'))  delta -= sign * speed;
+  } else {
+    // Vertical edge: ArrowDown = positive y, ArrowUp = negative y
+    if (isKeyDown('ArrowDown')) delta += sign * speed;
+    if (isKeyDown('ArrowUp'))   delta -= sign * speed;
   }
 
   if (delta === 0) return;
 
-  // Apply movement with clamping
-  scissors.pos = Math.max(0, Math.min(edgeLen, scissors.pos + delta));
+  scissors.pos += delta;
 
-  // 3. Magnetic Snapping
-  // Only snap if we are moving TOWARD the corner
-  if (scissors.pos < config.cornerSnapDistance && delta < 0) {
+  // Corner wrapping
+  if (scissors.pos < 0) {
+    const prevIndex = (scissors.edgeIndex - 1 + n) % n;
+    scissors.edgeIndex = prevIndex;
+    scissors.pos = edgeLength(poly, prevIndex) + scissors.pos; // pos is negative, so this subtracts
+    // Clamp in case overflow was large
+    scissors.pos = Math.max(0, scissors.pos);
+    return;
+  }
+
+  if (scissors.pos > len) {
+    const overflow = scissors.pos - len;
+    const nextIndex = (scissors.edgeIndex + 1) % n;
+    scissors.edgeIndex = nextIndex;
+    scissors.pos = overflow;
+    // Clamp in case overflow was large
+    scissors.pos = Math.min(scissors.pos, edgeLength(poly, nextIndex));
+    return;
+  }
+
+  // Corner snapping: snap when within cornerSnapDistance and moving toward corner
+  if (delta < 0 && scissors.pos < config.cornerSnapDistance) {
     scissors.pos = 0;
-  } else if (scissors.pos > edgeLen - config.cornerSnapDistance && delta > 0) {
-    scissors.pos = edgeLen;
+  } else if (delta > 0 && scissors.pos > len - config.cornerSnapDistance) {
+    scissors.pos = len;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 14. updateScissorsMovementTouch
+// ---------------------------------------------------------------------------
+
+export function updateScissorsMovementTouch(scissors, poly, config, dx, dy) {
+  const n = poly.vertices.length;
+  const { axis, sign } = edgeMovementAxis(poly, scissors.edgeIndex);
+  const len = edgeLength(poly, scissors.edgeIndex);
+
+  // Map swipe component along edge axis, applying edge direction sign
+  const raw = axis === 'x' ? dx : dy;
+  const perimeterDelta = raw * sign * config.touchSensitivity;
+
+  if (Math.abs(perimeterDelta) < 0.01) return;
+
+  scissors.pos += perimeterDelta;
+
+  // Corner wrapping
+  if (scissors.pos > len) {
+    const nextIndex = (scissors.edgeIndex + 1) % n;
+    scissors.edgeIndex = nextIndex;
+    scissors.pos = 0;
+  } else if (scissors.pos < 0) {
+    const prevIndex = (scissors.edgeIndex - 1 + n) % n;
+    scissors.edgeIndex = prevIndex;
+    scissors.pos = edgeLength(poly, prevIndex);
+  }
+
+  // Corner snapping
+  const newLen = edgeLength(poly, scissors.edgeIndex);
+  if (perimeterDelta < 0 && scissors.pos < config.cornerSnapDistance) {
+    scissors.pos = 0;
+  } else if (perimeterDelta > 0 && scissors.pos > newLen - config.cornerSnapDistance) {
+    scissors.pos = newLen;
   }
 }

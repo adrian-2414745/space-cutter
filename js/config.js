@@ -13,6 +13,7 @@ const DEFAULTS = {
   initialBallCount: 2,
   failPenalty: 'low',
   touchSensitivity: 1.0,
+  minCutDepth: 20,
 };
 
 const MOBILE_DEFAULTS = {

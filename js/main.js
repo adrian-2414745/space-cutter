@@ -2,14 +2,15 @@ import { isMobile, computeMobileSizing } from './mobile.js';
 import { initTouch, consumeTouchDelta, setDoubleTapCallback } from './touch.js';
 import { config } from './config.js';
 import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
-import { createInitialRectangle, splitRectangle } from './rectangle.js';
-import { clearCanvas, drawRectangle, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawBalls } from './renderer.js';
+import { createInitialRectangle } from './rectangle.js';
+import { createPolygonFromRect, polygonArea, nibblePolygon, raycastToEdge } from './polygon.js';
+import { clearCanvas, drawPolygon, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawPreviewLine, drawBalls } from './renderer.js';
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress } from './input.js';
-import { createScissors, updateScissorsMovement, updateScissorsMovementTouch, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut } from './scissors.js';
-import { createBall, updateBall, isBallInRect } from './ball.js';
-import { ballIntersectsCutLine } from './collision.js';
+import { createScissors, updateScissorsMovement, updateScissorsMovementTouch, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut, canCompleteCut, triggerPhase2 } from './scissors.js';
+import { createBall, updateBall, isBallInPolygon } from './ball.js';
+import { ballIntersectsLCut } from './collision.js';
 import { calculateScore } from './scoring.js';
 
 console.log('isMobile:', isMobile);
@@ -49,10 +50,12 @@ function applyMobileSizing() {
 resizeCanvas();
 applyMobileSizing();
 let rect = createInitialRectangle(config, canvas.width, canvas.height);
-let scissors = createScissors(rect);
+let poly = createPolygonFromRect(rect);
+let scissors = createScissors(poly);
+gameState.originalArea = polygonArea(poly);
 gameState.timeRemaining = config.timerDuration;
 for (let i = 0; i < config.initialBallCount; i++) {
-  gameState.balls.push(createBall(rect, config));
+  gameState.balls.push(createBall(poly, config));
 }
 
 applyConfigToPanel();
@@ -60,9 +63,11 @@ initInput();
 if (isMobile) {
   initTouch(canvas);
   setDoubleTapCallback(() => {
-    if (gameState.state === RUNNING && !isAtCorner(scissors, rect)) {
-      initiateCut(scissors, rect);
+    if (gameState.state === RUNNING && !isAtCorner(scissors, poly)) {
+      initiateCut(scissors, poly);
       setState(CUTTING);
+    } else if (gameState.state === CUTTING && canCompleteCut(scissors, poly, config)) {
+      triggerPhase2(scissors, poly);
     }
   });
 }
@@ -70,10 +75,12 @@ initUI(() => {
   resizeCanvas();
   applyMobileSizing();
   rect = createInitialRectangle(config, canvas.width, canvas.height);
-  scissors = createScissors(rect);
+  poly = createPolygonFromRect(rect);
+  scissors = createScissors(poly);
+  gameState.originalArea = polygonArea(poly);
   gameState.balls = [];
   for (let i = 0; i < config.initialBallCount; i++) {
-    gameState.balls.push(createBall(rect, config));
+    gameState.balls.push(createBall(poly, config));
   }
 });
 
@@ -126,24 +133,24 @@ function update(dt) {
   }
 
   for (const ball of gameState.balls) {
-    updateBall(ball, rect, dt);
+    updateBall(ball, poly, dt);
   }
 
   if (gameState.state === RUNNING) {
     if (isMobile) {
       const { x: tdx, y: tdy } = consumeTouchDelta();
-      updateScissorsMovementTouch(scissors, rect, config, tdx, tdy);
+      updateScissorsMovementTouch(scissors, poly, config, tdx, tdy);
     } else {
-      updateScissorsMovement(scissors, rect, dt, config);
+      updateScissorsMovement(scissors, poly, dt, config);
     }
 
-    if (!isMobile && consumeKeyPress(' ') && !isAtCorner(scissors, rect)) {
-      initiateCut(scissors, rect);
+    if (!isMobile && consumeKeyPress(' ') && !isAtCorner(scissors, poly)) {
+      initiateCut(scissors, poly);
       setState(CUTTING);
     }
   } else if (gameState.state === CUTTING) {
     if (isMobile) consumeTouchDelta(); // drain to prevent accumulated delta after cut ends
-    updateScissorsCut(scissors, rect, dt, config);
+    updateScissorsCut(scissors, poly, dt, config);
 
     if (checkCutCollision()) {
       gameState.failedCuts++;
@@ -152,31 +159,51 @@ function update(dt) {
       return;
     }
 
-    if (checkCutComplete(scissors, rect)) {
-      gameState.successfulCuts++;
-      const newRect = splitRectangle(rect, scissors.cutEdge, scissors.cutPos);
-      repositionScissorsAfterCut(scissors, newRect);
-      rect = newRect;
-      gameState.balls = gameState.balls.filter(b => isBallInRect(b, rect));
-      gameState.balls.push(createBall(rect, config));
-      gameState.score = Math.round((rect.width * rect.height) / gameState.originalArea * 10000) / 100;
-      drawScore(gameState.score);
-      if (gameState.score < config.winThreshold) {
-        gameState.finalScore = calculateScore(
-          gameState.score, true, gameState.timeRemaining, config.timerDuration,
-          gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
-        );
-        setState(WIN);
-        return;
+    if (scissors.cutPhase === 1) {
+      // Auto-trigger Phase 2: when Phase 1 cut reaches opposite boundary
+      const hit = raycastToEdge(
+        scissors.cutCurrent.x, scissors.cutCurrent.y,
+        scissors.cutDirection, poly
+      );
+      const nearBoundary = !hit || hit.distance < 2;
+
+      // Player-triggered Phase 2: spacebar/double-tap while in Phase 1
+      const playerTriggered = !isMobile && consumeKeyPress(' ') && canCompleteCut(scissors, poly, config);
+
+      if (nearBoundary || playerTriggered) {
+        triggerPhase2(scissors, poly);
       }
-      setState(RUNNING);
+    } else if (scissors.cutPhase === 2) {
+      if (checkCutComplete(scissors)) {
+        completeCut();
+      }
     }
   }
 }
 
+function completeCut() {
+  gameState.successfulCuts++;
+  const newPoly = nibblePolygon(poly, scissors.cutStart, scissors.cutTurn, scissors.cutTarget);
+  repositionScissorsAfterCut(scissors, newPoly);
+  poly = newPoly;
+  gameState.balls = gameState.balls.filter(b => isBallInPolygon(b, poly));
+  gameState.balls.push(createBall(poly, config));
+  gameState.score = Math.round(polygonArea(poly) / gameState.originalArea * 10000) / 100;
+  drawScore(gameState.score);
+  if (gameState.score < config.winThreshold) {
+    gameState.finalScore = calculateScore(
+      gameState.score, true, gameState.timeRemaining, config.timerDuration,
+      gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
+    );
+    setState(WIN);
+    return;
+  }
+  setState(RUNNING);
+}
+
 function checkCutCollision() {
   for (const ball of gameState.balls) {
-    if (ballIntersectsCutLine(ball, scissors.cutStart, scissors.cutCurrent)) {
+    if (ballIntersectsLCut(ball, scissors)) {
       return true;
     }
   }
@@ -185,10 +212,11 @@ function checkCutCollision() {
 
 function render() {
   clearCanvas(ctx, canvas);
-  drawRectangle(ctx, rect);
+  drawPolygon(ctx, poly);
   drawBalls(ctx, gameState.balls);
   drawCutLine(ctx, scissors);
-  drawScissors(ctx, scissors, rect);
+  drawPreviewLine(ctx, scissors, poly);
+  drawScissors(ctx, scissors, poly);
 
   if (gameState.state === PAUSED) {
     drawPausedOverlay(ctx, canvas);
