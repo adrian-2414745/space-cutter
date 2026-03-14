@@ -24,34 +24,30 @@ export function updateBall(ball, poly, dt) {
     const nx = -dy;
     const ny = dx;
 
-    const isHorizontal = edge.y1 === edge.y2;
-    const isVertical = edge.x1 === edge.x2;
+    // Use tolerance-based checks (matching polygon.js conventions) so that
+    // edges with sub-pixel coordinate differences from near-edge cuts are
+    // still recognised as axis-aligned boundaries.
+    const EDGE_TOL = 1;
+    const isHorizontal = Math.abs(edge.y1 - edge.y2) < EDGE_TOL;
+    const isVertical = Math.abs(edge.x1 - edge.x2) < EDGE_TOL;
 
     if (isHorizontal) {
-      // Determine inside direction from inward normal
-      // nx = dy = 0 for horizontal, ny = -dx
-      // Edge left-to-right (dx > 0): ny = -dx < 0, inside is above (lower y)... wait,
-      // CW normal means inside is in the direction of (dy, -dx).
-      // For edge going right (dx > 0): normal is (0, -dx) => pointing down (negative y is up in math,
-      // but in screen coords positive y is down). So ny < 0 means inside is upward in screen? No:
-      // ny = -dx. If dx > 0, ny < 0, meaning the inward normal points toward negative y (upward on screen).
-      // Actually let's just use the sign of ny to determine which side is "inside".
-      const insideBelow = ny > 0; // inward normal points toward +y (downward on screen)
+      const insideBelow = ny > 0;
 
       const minX = Math.min(edge.x1, edge.x2);
       const maxX = Math.max(edge.x1, edge.x2);
+      // Use averaged Y so sub-pixel differences don't shift the boundary
+      const edgeY = (edge.y1 + edge.y2) / 2;
 
       if (ball.x >= minX && ball.x <= maxX) {
         if (insideBelow) {
-          // Inside is below the edge; ball should be below edge.y1
-          const limit = edge.y1 + ball.radius;
+          const limit = edgeY + ball.radius;
           if (ball.y < limit) {
             ball.y = limit;
             ball.vy = Math.abs(ball.vy);
           }
         } else {
-          // Inside is above the edge; ball should be above edge.y1
-          const limit = edge.y1 - ball.radius;
+          const limit = edgeY - ball.radius;
           if (ball.y > limit) {
             ball.y = limit;
             ball.vy = -Math.abs(ball.vy);
@@ -59,25 +55,22 @@ export function updateBall(ball, poly, dt) {
         }
       }
     } else if (isVertical) {
-      // nx = dy, ny = 0 for vertical
-      // Edge going down (dy > 0): nx = dy > 0, inside is to the right (+x)
-      // Edge going up (dy < 0): nx = dy < 0, inside is to the left (-x)
       const insideRight = nx > 0;
 
       const minY = Math.min(edge.y1, edge.y2);
       const maxY = Math.max(edge.y1, edge.y2);
+      // Use averaged X so sub-pixel differences don't shift the boundary
+      const edgeX = (edge.x1 + edge.x2) / 2;
 
       if (ball.y >= minY && ball.y <= maxY) {
         if (insideRight) {
-          // Inside is to the right of the edge; ball should be right of edge.x1
-          const limit = edge.x1 + ball.radius;
+          const limit = edgeX + ball.radius;
           if (ball.x < limit) {
             ball.x = limit;
             ball.vx = Math.abs(ball.vx);
           }
         } else {
-          // Inside is to the left of the edge; ball should be left of edge.x1
-          const limit = edge.x1 - ball.radius;
+          const limit = edgeX - ball.radius;
           if (ball.x > limit) {
             ball.x = limit;
             ball.vx = -Math.abs(ball.vx);
