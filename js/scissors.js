@@ -237,20 +237,17 @@ export function getPreviewLine(scissors, poly) {
 // 11. repositionScissorsAfterCut
 // ---------------------------------------------------------------------------
 
-export function repositionScissorsAfterCut(scissors, poly) {
-  // Place scissors at cutTurn (point B) on whatever edge it now lies on
-  if (scissors.cutTurn) {
-    const edgeIdx = findEdgeAtPoint(poly, scissors.cutTurn.x, scissors.cutTurn.y);
+export function repositionScissorsAfterCut(scissors, poly, targetPoint) {
+  // Use provided targetPoint, or fall back to cutTurn (L-cut default)
+  const pt = targetPoint || scissors.cutTurn;
+  if (pt) {
+    const edgeIdx = findEdgeAtPoint(poly, pt.x, pt.y);
     if (edgeIdx !== -1) {
       scissors.edgeIndex = edgeIdx;
       const verts = poly.vertices;
       const a = verts[edgeIdx];
-      scissors.pos = Math.hypot(
-        scissors.cutTurn.x - a.x,
-        scissors.cutTurn.y - a.y
-      );
+      scissors.pos = Math.hypot(pt.x - a.x, pt.y - a.y);
     } else {
-      // Fallback: put at middle of edge 0
       scissors.edgeIndex = 0;
       scissors.pos = edgeLength(poly, 0) / 2;
     }

@@ -287,49 +287,7 @@ export function nibblePolygon(poly, A, B, C) {
     }
 
     // Build new vertex list with A and C inserted at their respective edge positions.
-    // We need to insert A after vertex edgeAIdx and C after vertex edgeCIdx.
-    // We must be careful about ordering since inserting one shifts indices.
-
-    // First, build list with split points inserted
-    let newVerts = verts.map(v => ({ x: v.x, y: v.y }));
-
-    // We insert in reverse index order to avoid shifting issues
-    const insertions = [
-        { idx: edgeAIdx, point: A },
-        { idx: edgeCIdx, point: C }
-    ];
-
-    // Sort by index descending so later insertions don't affect earlier indices
-    insertions.sort((a, b) => b.idx - a.idx);
-
-    // Handle case where both points are on the same edge
-    if (edgeAIdx === edgeCIdx) {
-        const edgeStart = verts[edgeAIdx];
-        const distA = Math.hypot(A.x - edgeStart.x, A.y - edgeStart.y);
-        const distC = Math.hypot(C.x - edgeStart.x, C.y - edgeStart.y);
-        // Insert the farther one first (higher index position after insert)
-        if (distA > distC) {
-            // Insert A first (farther), then C
-            newVerts.splice(edgeAIdx + 1, 0, { x: A.x, y: A.y });
-            newVerts.splice(edgeAIdx + 1, 0, { x: C.x, y: C.y });
-        } else {
-            newVerts.splice(edgeCIdx + 1, 0, { x: C.x, y: C.y });
-            newVerts.splice(edgeCIdx + 1, 0, { x: A.x, y: A.y });
-        }
-    } else {
-        for (const ins of insertions) {
-            // Check if point already matches a vertex at edge endpoints
-            const startV = newVerts[ins.idx];
-            const endV = newVerts[(ins.idx + 1) % newVerts.length];
-            const matchesStart = Math.abs(ins.point.x - startV.x) < TOLERANCE &&
-                                 Math.abs(ins.point.y - startV.y) < TOLERANCE;
-            const matchesEnd = Math.abs(ins.point.x - endV.x) < TOLERANCE &&
-                               Math.abs(ins.point.y - endV.y) < TOLERANCE;
-            if (!matchesStart && !matchesEnd) {
-                newVerts.splice(ins.idx + 1, 0, { x: ins.point.x, y: ins.point.y });
-            }
-        }
-    }
+    const newVerts = insertSplitPoints(verts, edgeAIdx, edgeCIdx, A, C);
 
     // Find indices of A and C in the new vertex list
     let idxA = -1, idxC = -1;
@@ -412,6 +370,111 @@ export function nibblePolygon(poly, A, B, C) {
     result = removeCollinear(result);
 
     return { vertices: result };
+}
+
+/**
+ * Insert split points A and C into a copy of verts at their respective edge positions.
+ * Returns augmented vertex array.
+ */
+function insertSplitPoints(verts, edgeAIdx, edgeCIdx, A, C) {
+    let newVerts = verts.map(v => ({ x: v.x, y: v.y }));
+
+    if (edgeAIdx === edgeCIdx) {
+        // Both on same edge — insert farther one first
+        const edgeStart = verts[edgeAIdx];
+        const distA = Math.hypot(A.x - edgeStart.x, A.y - edgeStart.y);
+        const distC = Math.hypot(C.x - edgeStart.x, C.y - edgeStart.y);
+        if (distA > distC) {
+            newVerts.splice(edgeAIdx + 1, 0, { x: A.x, y: A.y });
+            newVerts.splice(edgeAIdx + 1, 0, { x: C.x, y: C.y });
+        } else {
+            newVerts.splice(edgeCIdx + 1, 0, { x: C.x, y: C.y });
+            newVerts.splice(edgeCIdx + 1, 0, { x: A.x, y: A.y });
+        }
+    } else {
+        // Insert in reverse index order to avoid shifting issues
+        const insertions = [
+            { idx: edgeAIdx, point: A },
+            { idx: edgeCIdx, point: C }
+        ];
+        insertions.sort((a, b) => b.idx - a.idx);
+
+        for (const ins of insertions) {
+            const startV = newVerts[ins.idx];
+            const endV = newVerts[(ins.idx + 1) % newVerts.length];
+            const matchesStart = Math.abs(ins.point.x - startV.x) < TOLERANCE &&
+                                 Math.abs(ins.point.y - startV.y) < TOLERANCE;
+            const matchesEnd = Math.abs(ins.point.x - endV.x) < TOLERANCE &&
+                               Math.abs(ins.point.y - endV.y) < TOLERANCE;
+            if (!matchesStart && !matchesEnd) {
+                newVerts.splice(ins.idx + 1, 0, { x: ins.point.x, y: ins.point.y });
+            }
+        }
+    }
+
+    return newVerts;
+}
+
+/**
+ * Split polygon with a straight line from A to C.
+ * Returns the larger of the two resulting sub-polygons.
+ */
+export function splitPolygon(poly, A, C) {
+    const verts = poly.vertices;
+
+    const edgeAIdx = findEdgeAtPoint(poly, A.x, A.y);
+    const edgeCIdx = findEdgeAtPoint(poly, C.x, C.y);
+
+    if (edgeAIdx === -1 || edgeCIdx === -1 || edgeAIdx === edgeCIdx) {
+        return poly;
+    }
+
+    const newVerts = insertSplitPoints(verts, edgeAIdx, edgeCIdx, A, C);
+    const total = newVerts.length;
+
+    // Find indices of A and C in augmented list
+    let idxA = -1, idxC = -1;
+    for (let i = 0; i < total; i++) {
+        if (Math.abs(newVerts[i].x - A.x) < TOLERANCE && Math.abs(newVerts[i].y - A.y) < TOLERANCE) idxA = i;
+        if (Math.abs(newVerts[i].x - C.x) < TOLERANCE && Math.abs(newVerts[i].y - C.y) < TOLERANCE) idxC = i;
+    }
+
+    if (idxA === -1 || idxC === -1) return poly;
+
+    // Sub-polygon 1: walk CW from A to C (inclusive), closed by edge C→A
+    const sub1 = [];
+    {
+        let cur = idxA;
+        sub1.push({ x: newVerts[cur].x, y: newVerts[cur].y });
+        while (cur !== idxC) {
+            cur = (cur + 1) % total;
+            sub1.push({ x: newVerts[cur].x, y: newVerts[cur].y });
+        }
+    }
+
+    // Sub-polygon 2: walk CW from C to A (inclusive), closed by edge A→C
+    const sub2 = [];
+    {
+        let cur = idxC;
+        sub2.push({ x: newVerts[cur].x, y: newVerts[cur].y });
+        while (cur !== idxA) {
+            cur = (cur + 1) % total;
+            sub2.push({ x: newVerts[cur].x, y: newVerts[cur].y });
+        }
+    }
+
+    const clean1 = removeCollinear(sub1);
+    const clean2 = removeCollinear(sub2);
+
+    const poly1 = { vertices: clean1 };
+    const poly2 = { vertices: clean2 };
+    const area1 = polygonArea(poly1);
+    const area2 = polygonArea(poly2);
+
+    if (Math.abs(area1 - area2) <= 1) {
+        return Math.random() < 0.5 ? poly1 : poly2;
+    }
+    return area1 >= area2 ? poly1 : poly2;
 }
 
 /**

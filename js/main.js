@@ -3,7 +3,7 @@ import { initTouch, consumeTouchDelta, setDoubleTapCallback } from './touch.js';
 import { config } from './config.js';
 import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
 import { createInitialRectangle } from './rectangle.js';
-import { createPolygonFromRect, polygonArea, nibblePolygon, raycastToEdge } from './polygon.js';
+import { createPolygonFromRect, polygonArea, nibblePolygon, splitPolygon, raycastToEdge } from './polygon.js';
 import { clearCanvas, drawPolygon, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawPreviewLine, drawBalls } from './renderer.js';
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
@@ -160,18 +160,21 @@ function update(dt) {
     }
 
     if (scissors.cutPhase === 1) {
-      // Auto-trigger Phase 2: when Phase 1 cut reaches opposite boundary
-      const hit = raycastToEdge(
-        scissors.cutCurrent.x, scissors.cutCurrent.y,
-        scissors.cutDirection, poly
-      );
-      const nearBoundary = !hit || hit.distance < 2;
-
-      // Player-triggered Phase 2: spacebar/double-tap while in Phase 1
+      // Player-triggered Phase 2: spacebar/double-tap while in Phase 1 (takes priority)
       const playerTriggered = !isMobile && consumeKeyPress(' ') && canCompleteCut(scissors, poly, config);
 
-      if (nearBoundary || playerTriggered) {
+      if (playerTriggered) {
         triggerPhase2(scissors, poly);
+      } else {
+        // Auto: when Phase 1 cut reaches opposite boundary → straight cut
+        const hit = raycastToEdge(
+          scissors.cutCurrent.x, scissors.cutCurrent.y,
+          scissors.cutDirection, poly
+        );
+        const nearBoundary = !hit || hit.distance < 2;
+        if (nearBoundary) {
+          completeStraightCut();
+        }
       }
     } else if (scissors.cutPhase === 2) {
       if (checkCutComplete(scissors)) {
@@ -185,6 +188,33 @@ function completeCut() {
   gameState.successfulCuts++;
   const newPoly = nibblePolygon(poly, scissors.cutStart, scissors.cutTurn, scissors.cutTarget);
   repositionScissorsAfterCut(scissors, newPoly);
+  poly = newPoly;
+  gameState.balls = gameState.balls.filter(b => isBallInPolygon(b, poly));
+  gameState.balls.push(createBall(poly, config));
+  gameState.score = Math.round(polygonArea(poly) / gameState.originalArea * 10000) / 100;
+  drawScore(gameState.score);
+  if (gameState.score < config.winThreshold) {
+    gameState.finalScore = calculateScore(
+      gameState.score, true, gameState.timeRemaining, config.timerDuration,
+      gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
+    );
+    setState(WIN);
+    return;
+  }
+  setState(RUNNING);
+}
+
+function completeStraightCut() {
+  // Exact exit point: raycast from cutStart in cutDirection to opposite boundary
+  const hit = raycastToEdge(
+    scissors.cutStart.x, scissors.cutStart.y,
+    scissors.cutDirection, poly
+  );
+  const exitPoint = hit ? hit.point : scissors.cutCurrent;
+
+  gameState.successfulCuts++;
+  const newPoly = splitPolygon(poly, scissors.cutStart, exitPoint);
+  repositionScissorsAfterCut(scissors, newPoly, exitPoint);
   poly = newPoly;
   gameState.balls = gameState.balls.filter(b => isBallInPolygon(b, poly));
   gameState.balls.push(createBall(poly, config));
