@@ -64,7 +64,7 @@ export function loadConfigFromPanel() {
   config.scissorsBorderSpeed = Math.max(50, s || 200);
   const cs = parseInt(document.getElementById('cfg-cut-speed').value, 10);
   config.scissorsCutSpeed = Math.max(50, cs || 300);
-  config.cornerSnapDistance = Math.max(1, c || 8);
+  config.cornerSnapDistance = c;
   const wt = parseInt(document.getElementById('cfg-win-threshold').value, 10);
   config.winThreshold = Math.max(1, wt || 5);
   const bs = parseInt(document.getElementById('cfg-ball-speed').value, 10);
