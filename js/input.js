@@ -2,7 +2,7 @@ const keysDown = new Set();
 const keysPressed = new Set();
 
 export function initInput() {
-  const gameKeys = new Set([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'p', 'P']);
+  const gameKeys = new Set([' ', 'ArrowLeft', 'ArrowRight', 'p', 'P']);
 
   window.addEventListener('keydown', (e) => {
     if (gameKeys.has(e.key)) {

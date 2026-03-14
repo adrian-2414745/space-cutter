@@ -138,8 +138,8 @@ function update(dt) {
 
   if (gameState.state === RUNNING) {
     if (isMobile) {
-      const { x: tdx, y: tdy } = consumeTouchDelta();
-      updateScissorsMovementTouch(scissors, poly, config, tdx, tdy);
+      const { x: tdx } = consumeTouchDelta();
+      updateScissorsMovementTouch(scissors, poly, config, tdx);
     } else {
       updateScissorsMovement(scissors, poly, dt, config);
     }

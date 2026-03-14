@@ -2,23 +2,6 @@ import { isKeyDown } from './input.js';
 import { edgeLength, edgeDirection, pointOnEdge, raycastToEdge, getEdges, findEdgeAtPoint } from './polygon.js';
 
 // ---------------------------------------------------------------------------
-// Helper: determine movement axis and sign for a polygon edge
-// ---------------------------------------------------------------------------
-
-function edgeMovementAxis(poly, edgeIndex) {
-  const verts = poly.vertices;
-  const a = verts[edgeIndex];
-  const b = verts[(edgeIndex + 1) % verts.length];
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    return { axis: 'x', sign: dx > 0 ? 1 : -1 };
-  } else {
-    return { axis: 'y', sign: dy > 0 ? 1 : -1 };
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Direction helpers
 // ---------------------------------------------------------------------------
 
@@ -276,19 +259,11 @@ export function updateScissorsMovement(scissors, poly, dt, config) {
   const speed = config.scissorsBorderSpeed * dt;
   const len = edgeLength(poly, scissors.edgeIndex);
   const n = poly.vertices.length;
-  const { axis, sign } = edgeMovementAxis(poly, scissors.edgeIndex);
 
-  // Determine delta from arrow keys
+  // Right = CW (increasing pos), Left = CCW (decreasing pos)
   let delta = 0;
-  if (axis === 'x') {
-    // Horizontal edge: ArrowRight = positive x, ArrowLeft = negative x
-    if (isKeyDown('ArrowRight')) delta += sign * speed;
-    if (isKeyDown('ArrowLeft'))  delta -= sign * speed;
-  } else {
-    // Vertical edge: ArrowDown = positive y, ArrowUp = negative y
-    if (isKeyDown('ArrowDown')) delta += sign * speed;
-    if (isKeyDown('ArrowUp'))   delta -= sign * speed;
-  }
+  if (isKeyDown('ArrowRight')) delta += speed;
+  if (isKeyDown('ArrowLeft'))  delta -= speed;
 
   if (delta === 0) return;
 
@@ -326,14 +301,12 @@ export function updateScissorsMovement(scissors, poly, dt, config) {
 // 14. updateScissorsMovementTouch
 // ---------------------------------------------------------------------------
 
-export function updateScissorsMovementTouch(scissors, poly, config, dx, dy) {
+export function updateScissorsMovementTouch(scissors, poly, config, dx) {
   const n = poly.vertices.length;
-  const { axis, sign } = edgeMovementAxis(poly, scissors.edgeIndex);
   const len = edgeLength(poly, scissors.edgeIndex);
 
-  // Map swipe component along edge axis, applying edge direction sign
-  const raw = axis === 'x' ? dx : dy;
-  const perimeterDelta = raw * sign * config.touchSensitivity;
+  // Swipe right = CW (positive dx), swipe left = CCW (negative dx)
+  const perimeterDelta = dx * config.touchSensitivity;
 
   if (Math.abs(perimeterDelta) < 0.01) return;
 
