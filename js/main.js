@@ -8,7 +8,7 @@ import { clearCanvas, drawPolygon, drawScore, drawLiveScore, drawTimer, drawPaus
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress } from './input.js';
-import { createScissors, updateScissorsMovement, updateScissorsMovementTouch, isAtCorner, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut, canCompleteCut, triggerPhase2 } from './scissors.js';
+import { createScissors, updateScissorsMovement, updateScissorsMovementTouch, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut, canCompleteCut, triggerPhase2 } from './scissors.js';
 import { createBall, updateBall, isBallInPolygon } from './ball.js';
 import { ballIntersectsLCut } from './collision.js';
 import { calculateScore } from './scoring.js';
@@ -46,19 +46,19 @@ let mobileSizing = null;
 
 function resizeCanvas() {
   if (isMobile) {
-    const hud      = document.getElementById('hud');
+    const hud = document.getElementById('hud');
     const controls = document.getElementById('controls');
-    const hudH     = hud.getBoundingClientRect().height  || 44;
-    const ctrlH    = controls.getBoundingClientRect().height || 52;
-    const gaps     = 16;
+    const hudH = hud.getBoundingClientRect().height || 44;
+    const ctrlH = controls.getBoundingClientRect().height || 52;
+    const gaps = 16;
 
-    canvas.width  = window.innerWidth;
+    canvas.width = window.innerWidth;
     canvas.height = Math.max(200, window.innerHeight - hudH - ctrlH - gaps);
 
-    config.rectWidth  = canvas.width  - MOBILE_CANVAS_PADDING * 2;
+    config.rectWidth = canvas.width - MOBILE_CANVAS_PADDING * 2;
     config.rectHeight = canvas.height - MOBILE_CANVAS_PADDING * 2;
   } else {
-    canvas.width  = Math.max(600, config.rectWidth  + CANVAS_PADDING * 2);
+    canvas.width = Math.max(600, config.rectWidth + CANVAS_PADDING * 2);
     canvas.height = Math.max(400, config.rectHeight + CANVAS_PADDING * 2);
   }
 }
@@ -83,7 +83,7 @@ initInput();
 if (isMobile) {
   initTouch(canvas);
   setDoubleTapCallback(() => {
-    if (gameState.state === RUNNING && !isAtCorner(scissors, poly)) {
+    if (gameState.state === RUNNING) {
       initiateCut(scissors, poly);
       setState(CUTTING);
     } else if (gameState.state === CUTTING && canCompleteCut(scissors, poly, config)) {
@@ -162,7 +162,7 @@ function update(dt) {
       updateScissorsMovement(scissors, poly, dt, config);
     }
 
-    if (!isMobile && consumeKeyPress(' ') && !isAtCorner(scissors, poly)) {
+    if (!isMobile && consumeKeyPress(' ')) {
       initiateCut(scissors, poly);
       setState(CUTTING);
     }
