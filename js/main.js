@@ -15,6 +15,24 @@ import { calculateScore } from './scoring.js';
 
 console.log('isMobile:', isMobile);
 
+function reconcileBalls(poly) {
+  const area = polygonArea(poly);
+  gameState.balls = gameState.balls.filter(b => isBallInPolygon(b, poly));
+  const target = Math.max(config.minBalls, Math.floor(area / config.ballDensityPx2));
+  const delta = target - gameState.balls.length;
+  if (delta > 0) {
+    for (let i = 0; i < delta; i++) {
+      gameState.balls.push(createBall(poly, config));
+    }
+  } else if (delta < 0) {
+    for (let i = gameState.balls.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [gameState.balls[i], gameState.balls[j]] = [gameState.balls[j], gameState.balls[i]];
+    }
+    gameState.balls.length = target;
+  }
+}
+
 const CANVAS_PADDING = 40;
 const MOBILE_CANVAS_PADDING = 16;
 const canvas = document.getElementById('game-canvas');
@@ -54,9 +72,7 @@ let poly = createPolygonFromRect(rect);
 let scissors = createScissors(poly);
 gameState.originalArea = polygonArea(poly);
 gameState.timeRemaining = config.timerDuration;
-for (let i = 0; i < config.initialBallCount; i++) {
-  gameState.balls.push(createBall(poly, config));
-}
+reconcileBalls(poly);
 
 applyConfigToPanel();
 initInput();
@@ -79,9 +95,7 @@ initUI(() => {
   scissors = createScissors(poly);
   gameState.originalArea = polygonArea(poly);
   gameState.balls = [];
-  for (let i = 0; i < config.initialBallCount; i++) {
-    gameState.balls.push(createBall(poly, config));
-  }
+  reconcileBalls(poly);
 });
 
 drawScore(gameState.score);
@@ -189,8 +203,7 @@ function completeCut() {
   const newPoly = nibblePolygon(poly, scissors.cutStart, scissors.cutTurn, scissors.cutTarget);
   repositionScissorsAfterCut(scissors, newPoly);
   poly = newPoly;
-  gameState.balls = gameState.balls.filter(b => isBallInPolygon(b, poly));
-  gameState.balls.push(createBall(poly, config));
+  reconcileBalls(poly);
   gameState.score = Math.round(polygonArea(poly) / gameState.originalArea * 10000) / 100;
   drawScore(gameState.score);
   if (gameState.score < config.winThreshold) {
@@ -216,8 +229,7 @@ function completeStraightCut() {
   const newPoly = splitPolygon(poly, scissors.cutStart, exitPoint);
   repositionScissorsAfterCut(scissors, newPoly, exitPoint);
   poly = newPoly;
-  gameState.balls = gameState.balls.filter(b => isBallInPolygon(b, poly));
-  gameState.balls.push(createBall(poly, config));
+  reconcileBalls(poly);
   gameState.score = Math.round(polygonArea(poly) / gameState.originalArea * 10000) / 100;
   drawScore(gameState.score);
   if (gameState.score < config.winThreshold) {

@@ -10,7 +10,8 @@ const DEFAULTS = {
   cornerSnapDistance: 8,
   ballSpeed: 150,
   ballRadius: 6,
-  initialBallCount: 2,
+  ballDensityPx2: 72000,
+  minBalls: 2,
   failPenalty: 'low',
   touchSensitivity: 1.0,
   minCutDepth: 20,
@@ -35,7 +36,8 @@ export function applyConfigToPanel() {
   document.getElementById('cfg-win-threshold').value = config.winThreshold;
   document.getElementById('cfg-ball-speed').value = config.ballSpeed;
   document.getElementById('cfg-ball-radius').value = config.ballRadius;
-  document.getElementById('cfg-ball-count').value = config.initialBallCount;
+  document.getElementById('cfg-ball-density').value = config.ballDensityPx2;
+  document.getElementById('cfg-min-balls').value = config.minBalls;
   document.getElementById('cfg-fail-penalty').value = config.failPenalty;
   document.getElementById('cfg-touch-sensitivity').value = config.touchSensitivity;
 }
@@ -67,8 +69,10 @@ export function loadConfigFromPanel() {
   config.ballSpeed = Math.max(10, bs || 150);
   const br = parseInt(document.getElementById('cfg-ball-radius').value, 10);
   config.ballRadius = Math.max(2, br || 6);
-  const bc = parseInt(document.getElementById('cfg-ball-count').value, 10);
-  config.initialBallCount = Math.max(1, bc || 1);
+  const bd = parseInt(document.getElementById('cfg-ball-density').value, 10);
+  config.ballDensityPx2 = Math.max(1000, bd || 72000);
+  const mb = parseInt(document.getElementById('cfg-min-balls').value, 10);
+  config.minBalls = Math.max(1, mb || 2);
   config.failPenalty = document.getElementById('cfg-fail-penalty').value;
   const ts = parseFloat(document.getElementById('cfg-touch-sensitivity').value);
   config.touchSensitivity = Math.max(0.5, Math.min(5.0, ts || 2.5));
