@@ -18,8 +18,12 @@ console.log('isMobile:', isMobile);
 function reconcileBalls(poly) {
   const area = polygonArea(poly);
   gameState.balls = gameState.balls.filter(b => isBallInPolygon(b, poly));
-  const target = Math.max(config.minBalls, Math.floor(area / config.ballDensityPx2));
+  const areaPercent = gameState.originalArea > 0 ? (area / gameState.originalArea) * 100 : 100;
+  const progressFactor = 1 + config.densityRampK * (1 - areaPercent / 100);
+  const effectiveDensity = config.ballDensityPx2 / progressFactor;
+  const target = Math.max(config.minBalls, Math.floor(area / effectiveDensity));
   const delta = target - gameState.balls.length;
+  console.log(effectiveDensity)
   if (delta > 0) {
     for (let i = 0; i < delta; i++) {
       gameState.balls.push(createBall(poly, config));
