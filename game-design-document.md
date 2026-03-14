@@ -52,9 +52,13 @@ The player starts with a large rectangular playing field containing bouncing bal
 ## 4. Core Mechanics
 
 ### 4.1 Scissors Movement
-- The scissors travels along the perimeter of the current polygon, automatically wrapping around corners.
-- **Corner snapping:** When within a few pixels of a corner, the scissors snaps to the exact corner position.
-- The scissors cannot move while a cut is in progress.
+- **Perimeter Constraint:** The scissors is constrained to the boundary of the polygon, automatically wrapping around corners during movement.
+- **The Intent vs. Input Problem:** In a game where 100% precision matters for area maximization, requiring a player to manually align the scissors to a 1-pixel corner is frustrating ("fiddly"). Corner snapping aligns the software to the player's likely intent.
+- **Directional Snapping (The "Magnet vs. Sticky" Rule):** 
+  - To be rewarding without being a "trap," snapping must be **directional**.
+  - **The Magnet:** When moving *toward* a corner, the scissors will "snap" exactly to the corner position if it comes within the `cornerSnapDistance`. This makes finding the corner feel smooth and effortless.
+  - **Avoiding the Stickiness:** If the player is at a corner and pushes *away* from it, the snap is ignored. This ensures the corner doesn't feel "magnetic" or "sticky" when trying to leave, allowing for high-precision cuts just a few pixels away from a vertex.
+- **State Lock:** The scissors cannot move while a cut is in progress.
 
 ### 4.2 Cutting (L-Cut or Straight Cut)
 1. **Phase 1 (Inward Travel):**
