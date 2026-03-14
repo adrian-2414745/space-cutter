@@ -1,7 +1,7 @@
 // polygon.js — Rectilinear polygon module for Space Cutter
 // Represents a play area with clockwise-wound, axis-aligned vertices.
 
-const TOLERANCE = 1.0;
+
 
 /**
  * Convert a rect {x, y, width, height} to a polygon with 4 CW vertices.
@@ -136,8 +136,8 @@ export function raycastToEdge(px, py, direction, poly) {
     let bestPoint = null;
 
     for (const e of edges) {
-        const isHorizontal = Math.abs(e.y1 - e.y2) < TOLERANCE;
-        const isVertical = Math.abs(e.x1 - e.x2) < TOLERANCE;
+        const isHorizontal = e.y1 === e.y2;
+        const isVertical = e.x1 === e.x2;
 
         if (direction === 'down' || direction === 'up') {
             // Only hit horizontal edges
@@ -145,7 +145,7 @@ export function raycastToEdge(px, py, direction, poly) {
             const edgeY = e.y1;
             const minX = Math.min(e.x1, e.x2);
             const maxX = Math.max(e.x1, e.x2);
-            if (px < minX - TOLERANCE || px > maxX + TOLERANCE) continue;
+            if (px < minX || px > maxX) continue;
 
             if (direction === 'down' && edgeY > py) {
                 const dist = edgeY - py;
@@ -166,7 +166,7 @@ export function raycastToEdge(px, py, direction, poly) {
             const edgeX = e.x1;
             const minY = Math.min(e.y1, e.y2);
             const maxY = Math.max(e.y1, e.y2);
-            if (py < minY - TOLERANCE || py > maxY + TOLERANCE) continue;
+            if (py < minY || py > maxY) continue;
 
             if (direction === 'right' && edgeX > px) {
                 const dist = edgeX - px;
@@ -196,22 +196,22 @@ export function findEdgeAtPoint(poly, px, py) {
     const edges = getEdges(poly);
     for (let i = 0; i < edges.length; i++) {
         const e = edges[i];
-        const isHorizontal = Math.abs(e.y1 - e.y2) < TOLERANCE;
-        const isVertical = Math.abs(e.x1 - e.x2) < TOLERANCE;
+        const isHorizontal = e.y1 === e.y2;
+        const isVertical = e.x1 === e.x2;
 
         if (isHorizontal) {
-            if (Math.abs(py - e.y1) <= TOLERANCE) {
+            if (py === e.y1) {
                 const minX = Math.min(e.x1, e.x2);
                 const maxX = Math.max(e.x1, e.x2);
-                if (px >= minX - TOLERANCE && px <= maxX + TOLERANCE) {
+                if (px >= minX && px <= maxX) {
                     return i;
                 }
             }
         } else if (isVertical) {
-            if (Math.abs(px - e.x1) <= TOLERANCE) {
+            if (px === e.x1) {
                 const minY = Math.min(e.y1, e.y2);
                 const maxY = Math.max(e.y1, e.y2);
-                if (py >= minY - TOLERANCE && py <= maxY + TOLERANCE) {
+                if (py >= minY && py <= maxY) {
                     return i;
                 }
             }
@@ -292,10 +292,10 @@ export function nibblePolygon(poly, A, B, C) {
     // Find indices of A and C in the new vertex list
     let idxA = -1, idxC = -1;
     for (let i = 0; i < newVerts.length; i++) {
-        if (Math.abs(newVerts[i].x - A.x) < TOLERANCE && Math.abs(newVerts[i].y - A.y) < TOLERANCE) {
+        if (newVerts[i].x === A.x && newVerts[i].y === A.y) {
             idxA = i;
         }
-        if (Math.abs(newVerts[i].x - C.x) < TOLERANCE && Math.abs(newVerts[i].y - C.y) < TOLERANCE) {
+        if (newVerts[i].x === C.x && newVerts[i].y === C.y) {
             idxC = i;
         }
     }
@@ -402,10 +402,8 @@ function insertSplitPoints(verts, edgeAIdx, edgeCIdx, A, C) {
         for (const ins of insertions) {
             const startV = newVerts[ins.idx];
             const endV = newVerts[(ins.idx + 1) % newVerts.length];
-            const matchesStart = Math.abs(ins.point.x - startV.x) < TOLERANCE &&
-                                 Math.abs(ins.point.y - startV.y) < TOLERANCE;
-            const matchesEnd = Math.abs(ins.point.x - endV.x) < TOLERANCE &&
-                               Math.abs(ins.point.y - endV.y) < TOLERANCE;
+            const matchesStart = ins.point.x === startV.x && ins.point.y === startV.y;
+            const matchesEnd = ins.point.x === endV.x && ins.point.y === endV.y;
             if (!matchesStart && !matchesEnd) {
                 newVerts.splice(ins.idx + 1, 0, { x: ins.point.x, y: ins.point.y });
             }
@@ -435,8 +433,8 @@ export function splitPolygon(poly, A, C) {
     // Find indices of A and C in augmented list
     let idxA = -1, idxC = -1;
     for (let i = 0; i < total; i++) {
-        if (Math.abs(newVerts[i].x - A.x) < TOLERANCE && Math.abs(newVerts[i].y - A.y) < TOLERANCE) idxA = i;
-        if (Math.abs(newVerts[i].x - C.x) < TOLERANCE && Math.abs(newVerts[i].y - C.y) < TOLERANCE) idxC = i;
+        if (newVerts[i].x === A.x && newVerts[i].y === A.y) idxA = i;
+        if (newVerts[i].x === C.x && newVerts[i].y === C.y) idxC = i;
     }
 
     if (idxA === -1 || idxC === -1) return poly;
@@ -493,8 +491,8 @@ function removeCollinear(verts) {
             const next = verts[(i + 1) % n];
             // Check if prev, curr, next are collinear
             // For axis-aligned edges: all three share same x or same y
-            const sameX = Math.abs(prev.x - curr.x) < TOLERANCE && Math.abs(curr.x - next.x) < TOLERANCE;
-            const sameY = Math.abs(prev.y - curr.y) < TOLERANCE && Math.abs(curr.y - next.y) < TOLERANCE;
+            const sameX = prev.x === curr.x && curr.x === next.x;
+            const sameY = prev.y === curr.y && curr.y === next.y;
             if (sameX || sameY) {
                 changed = true;
                 // Skip this vertex

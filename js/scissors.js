@@ -6,10 +6,10 @@ import { edgeLength, edgeDirection, pointOnEdge, raycastToEdge, getEdges, findEd
 // ---------------------------------------------------------------------------
 
 const DIR_VECTORS = {
-  up:    { x:  0, y: -1 },
-  down:  { x:  0, y:  1 },
-  left:  { x: -1, y:  0 },
-  right: { x:  1, y:  0 },
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
 };
 
 function perpendiculars(dir) {
@@ -91,7 +91,7 @@ export function updateScissorsCut(scissors, poly, dt, config) {
 }
 
 // ---------------------------------------------------------------------------
-// 5. triggerPhase2 (NEW)
+// 5. triggerPhase2
 // ---------------------------------------------------------------------------
 
 export function triggerPhase2(scissors, poly) {
@@ -263,7 +263,7 @@ export function updateScissorsMovement(scissors, poly, dt, config) {
   // Right = CW (increasing pos), Left = CCW (decreasing pos)
   let delta = 0;
   if (isKeyDown('ArrowRight')) delta += speed;
-  if (isKeyDown('ArrowLeft'))  delta -= speed;
+  if (isKeyDown('ArrowLeft')) delta -= speed;
 
   if (delta === 0) return;
 
