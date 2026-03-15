@@ -3,15 +3,16 @@ import { config, loadConfigFromPanel, applyConfigToPanel, resetConfigToDefaults 
 import { drawScore, drawLiveScore, drawTimer } from './renderer.js';
 import { isMobile } from './mobile.js';
 
-let onReset = null;
+
 
 export function initUI(resetCallback) {
-  onReset = resetCallback;
 
+
+  console.log("initUI")
   document.getElementById('btn-start').addEventListener('click', handleStart);
-  document.getElementById('btn-reset').addEventListener('click', handleReset);
+  document.getElementById('btn-reset').addEventListener('click', () => handleReset(resetCallback));
   document.getElementById('btn-config').addEventListener('click', handleConfig);
-  document.getElementById('btn-save-config').addEventListener('click', handleSaveConfig);
+  document.getElementById('btn-save-config').addEventListener('click', () => handleSaveConfig(resetCallback));
   document.getElementById('btn-reset-config').addEventListener('click', resetConfigToDefaults);
 
   const btnHelp      = document.getElementById('btn-help');
@@ -42,18 +43,12 @@ function handleStart() {
   }
 }
 
-function handleReset() {
-  setState(IDLE);
-  gameState.score = 100;
-  gameState.timeRemaining = config.timerDuration;
-  gameState.successfulCuts = 0;
-  gameState.failedCuts = 0;
-  gameState.finalScore = null;
+function handleReset(resetCallback) {
+  resetCallback();
   drawScore(gameState.score);
   drawLiveScore(0);
   drawTimer(gameState.timeRemaining);
   document.getElementById('btn-start').disabled = false;
-  if (onReset) onReset();
 }
 
 function handleConfig() {
@@ -62,8 +57,8 @@ function handleConfig() {
   document.getElementById('config-panel').classList.remove('hidden');
 }
 
-function handleSaveConfig() {
+function handleSaveConfig(resetCallback) {
   loadConfigFromPanel();
   document.getElementById('config-panel').classList.add('hidden');
-  if (onReset) onReset();
+  resetCallback();
 }

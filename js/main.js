@@ -1,7 +1,7 @@
 import { isMobile, computeMobileSizing } from './mobile.js';
 import { initTouch, consumeTouchDelta, setDoubleTapCallback } from './touch.js';
 import { config } from './config.js';
-import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
+import { gameState, setState, resetState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
 import { createInitialRectangle } from './rectangle.js';
 import { createPolygonFromRect, polygonArea, raycastToEdge } from './polygon.js';
 import { clearCanvas, drawPolygon, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawPreviewLine, drawBalls } from './renderer.js';
@@ -47,14 +47,20 @@ function applyMobileSizing() {
   config.cornerSnapDistance = mobileSizing.cornerSnapPx;
 }
 
-resizeCanvas();
-applyMobileSizing();
-let rect = createInitialRectangle(config, canvas.width, canvas.height);
-let poly = createPolygonFromRect(rect);
-let scissors = createScissors(poly);
-gameState.originalArea = polygonArea(poly);
-gameState.timeRemaining = config.timerDuration;
-gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
+let rect, poly, scissors;
+
+function resetGameWorld() {
+  resetState(config.timerDuration);
+  resizeCanvas();
+  applyMobileSizing();
+  rect = createInitialRectangle(config, canvas.width, canvas.height);
+  poly = createPolygonFromRect(rect);
+  scissors = createScissors(poly);
+  gameState.originalArea = polygonArea(poly);
+  gameState.balls = reconcileBalls(poly, [], config, gameState.originalArea);
+}
+
+resetGameWorld();
 
 applyConfigToPanel();
 initInput();
@@ -69,16 +75,7 @@ if (isMobile) {
     }
   });
 }
-initUI(() => {
-  resizeCanvas();
-  applyMobileSizing();
-  rect = createInitialRectangle(config, canvas.width, canvas.height);
-  poly = createPolygonFromRect(rect);
-  scissors = createScissors(poly);
-  gameState.originalArea = polygonArea(poly);
-  gameState.balls = [];
-  gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
-});
+initUI(resetGameWorld);
 
 let lastTime = performance.now();
 

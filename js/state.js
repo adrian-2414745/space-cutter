@@ -20,3 +20,12 @@ export const gameState = {
 export function setState(newState) {
   gameState.state = newState;
 }
+
+export function resetState(timerDuration) {
+  gameState.state = IDLE;
+  gameState.score = 100;
+  gameState.timeRemaining = timerDuration;
+  gameState.successfulCuts = 0;
+  gameState.failedCuts = 0;
+  gameState.finalScore = null;
+}
