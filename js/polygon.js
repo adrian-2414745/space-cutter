@@ -304,70 +304,38 @@ export function nibblePolygon(poly, A, B, C) {
         return poly;
     }
 
-    // Walk CW from C to A (the short arc — the corner being removed).
-    // Count vertices in both directions and pick the shorter one.
     const total = newVerts.length;
 
-    // CW arc from C to A: go C, C+1, C+2, ..., A
-    let cwCount = 0;
+    // Build both sub-polygons and keep the larger one (by area).
+    // Sub-polygon 1: walk CW from A to C, then B to close
+    const sub1 = [];
     {
-        let cur = idxC;
-        while (cur !== idxA) {
-            cur = (cur + 1) % total;
-            cwCount++;
-        }
-    }
-
-    // CCW arc from C to A: go C, C-1, C-2, ..., A
-    let ccwCount = 0;
-    {
-        let cur = idxC;
-        while (cur !== idxA) {
-            cur = (cur - 1 + total) % total;
-            ccwCount++;
-        }
-    }
-
-    // The "short arc" is the one with fewer vertices — the corner being nibbled
-    // We want to keep the long arc and replace the short arc with C -> B -> A
-    let result;
-    if (cwCount <= ccwCount) {
-        // Short arc goes CW from C to A. Keep CCW arc from A to C, then insert B.
-        // Build: start from A, walk CW (the long way, through the kept region) to C, then B, then back to A
-        result = [];
-        result.push({ x: A.x, y: A.y });
-        // Walk from A CW through the KEPT vertices to C
-        // The kept arc goes: A -> A-1 -> ... -> C (going CCW, which is the long way around)
-        // Actually let me think again. We have CW vertex order.
-        // Short arc CW from C to A means vertices C, C+1, ..., A (cwCount steps)
-        // Long arc CW from A to C means vertices A, A+1, ..., C
-        // We keep the long arc: A -> A+1 -> ... -> C, then replace the short arc with B
         let cur = idxA;
-        result.push({ x: newVerts[cur].x, y: newVerts[cur].y });
+        sub1.push({ x: newVerts[cur].x, y: newVerts[cur].y });
         while (cur !== idxC) {
             cur = (cur + 1) % total;
-            result.push({ x: newVerts[cur].x, y: newVerts[cur].y });
+            sub1.push({ x: newVerts[cur].x, y: newVerts[cur].y });
         }
-        // Now add B between C and A (closing the polygon back to A)
-        result.push({ x: B.x, y: B.y });
-        // Remove the duplicate A at the start (it will close naturally)
-        result.shift();
-    } else {
-        // Short arc goes CCW from C to A (i.e., CW from A to C is the short arc).
-        // Keep CW arc from C to A (the long way).
-        result = [];
-        let cur = idxC;
-        result.push({ x: newVerts[cur].x, y: newVerts[cur].y });
-        while (cur !== idxA) {
-            cur = (cur + 1) % total;
-            result.push({ x: newVerts[cur].x, y: newVerts[cur].y });
-        }
-        // Insert B between A and C to close
-        result.push({ x: B.x, y: B.y });
+        sub1.push({ x: B.x, y: B.y });
     }
 
-    // Remove collinear vertices
-    result = removeCollinear(result);
+    // Sub-polygon 2: walk CW from C to A, then B to close
+    const sub2 = [];
+    {
+        let cur = idxC;
+        sub2.push({ x: newVerts[cur].x, y: newVerts[cur].y });
+        while (cur !== idxA) {
+            cur = (cur + 1) % total;
+            sub2.push({ x: newVerts[cur].x, y: newVerts[cur].y });
+        }
+        sub2.push({ x: B.x, y: B.y });
+    }
+
+    const clean1 = removeCollinear(sub1);
+    const clean2 = removeCollinear(sub2);
+    const area1 = polygonArea({ vertices: clean1 });
+    const area2 = polygonArea({ vertices: clean2 });
+    const result = area1 >= area2 ? clean1 : clean2;
 
     return { vertices: result };
 }
