@@ -25,8 +25,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Balls reflect off all polygon edges using CW inward normals; balls pass through each other
 - Corner snapping: scissors snaps to exact corner when within `cornerSnapDistance` pixels
 
+## Testing
+
+- **Framework:** [Vitest](https://vitest.dev/) — `npm test` (single run) or `npm run test:watch` (watch mode)
+- **Test files:** `tests/**/*.test.js`
+- Tests target pure functions in game modules; no browser/canvas environment needed
+- `polygon.js` is a pure leaf module (no imports) — prefer it for unit tests
+- `ball.js` imports from `polygon.js` — both resolve fine under vitest's ES module support
+- development environment: Windows 11
+
 ## Design Documents
 
 - `game-design-document.md` — Complete game design (mechanics, controls, scoring, UI layout, configurable parameters)
 - `architecture.md` — High level technical design (architecture, data structures, algorithms, game loop)
 - `game-ui.png` and `before-after-cut-scissor-position.png` — Visual references
+
+
+# Build commands
+
+## Tests
+
+Quick: `npm test`
+Single test: `npx vitest run -t "test-name"`
