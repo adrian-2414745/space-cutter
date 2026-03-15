@@ -57,19 +57,18 @@ If a module is hard to test for multiple reasons — it uses the keyboard and ma
 
 ---
 
-## Current State (Honest Assessment)
+## Current State
 
-The codebase is already partially well-structured. Before prescribing changes, it's worth mapping what's already testable versus what isn't.
+All game logic modules are now fully unit-testable (pure, no browser deps):
 
-**Already testable today (pure, no browser deps):**
-- `polygon.js` — 13 functions, zero imports, pure geometry. Test freely.
+- `polygon.js` — 13 functions, zero imports, pure geometry.
 - `collision.js` — takes ball + scissors objects, returns bool.
 - `scoring.js` — pure calculation, takes numbers, returns number.
-- `ball.js` — 3 functions, only imports from `polygon.js`. Nearly pure (uses `Math.random` internally in `createBall`).
-- `scissors.js` 
-**Not yet testable:**
+- `ball.js` — only imports from `polygon.js`. (`createBall` uses `Math.random` internally — acceptable for now.)
+- `scissors.js` — fully pure after `isKeyDown` was removed; takes `input: { left, right }` as a parameter.
+- `game.js` — extracted from `main.js`; 4 pure functions taking explicit args, returning values.
 
-- `main.js` — The `update()` function mixes game logic, state mutation, and rendering calls (`drawTimer`, `drawLiveScore`). `reconcileBalls`, `completeCut`, `completeStraightCut` contain real game logic but are trapped as private closures inside `main.js`.
+`main.js` is the sole platform-coupled module: it owns the game loop, wires input/rendering, and holds mutable state. All computation is delegated to the modules above.
 
 ---
 
@@ -81,116 +80,7 @@ The rule: **game logic modules must not import from platform modules** (`input.j
 
 Platform modules are fine to exist — they're the bridge between browser APIs and game logic. But the bridge must be one-directional: platform modules call logic modules, never the reverse.
 
-Current violations:
-- `scissors.js` → `input.js` (keyboard state)
-- `renderer.js` → `scissors.js` (acceptable — renderer is a platform module, this direction is fine)
-- `update()` in `main.js` calls `drawTimer()` / `drawLiveScore()` mid-logic (mixing layers)
-
----
-
-## Principle: Input as Data, Not Dependency
-
-The specific fix for `scissors.js` is the canonical pattern for this class of problem.
-
-**Current (untestable):**
-```js
-// scissors.js
-import { isKeyDown } from './input.js';
-
-export function updateScissorsMovement(scissors, poly, dt, config) {
-  if (isKeyDown('ArrowRight')) delta += speed;
-  if (isKeyDown('ArrowLeft'))  delta -= speed;
-}
-```
-
-**Target (testable):**
-```js
-// scissors.js — no import from input.js
-export function updateScissorsMovement(scissors, poly, dt, config, input) {
-  // input = { left: bool, right: bool }
-  if (input.right) delta += speed;
-  if (input.left)  delta -= speed;
-}
-
-// main.js — platform layer owns the translation
-const input = { left: isKeyDown('ArrowLeft'), right: isKeyDown('ArrowRight') };
-updateScissorsMovement(scissors, poly, dt, config, input);
-```
-
-The game logic function now takes a plain data object. In tests, you pass `{ left: true, right: false }`. 
-In production, `main.js` reads the keyboard and constructs that object. The logic module doesn't know or care where the data came from.
-
-Apply the same pattern to `updateScissorsMovementTouch` — it already receives `dx` as a parameter, so it's already correct.
-
----
-
-## Principle: Extract Logic Out of main.js
-
-`main.js` currently contains real game logic — `reconcileBalls`, `completeCut`, `completeStraightCut`, `checkCutCollision` — as private closures with closure access to `poly`, `gameState`, `config`, `scissors`. This makes them untestable.
-
-The extraction pattern:
-
-```js
-// Before (in main.js, private closure):
-function completeCut() {
-  gameState.successfulCuts++;
-  const newPoly = nibblePolygon(poly, scissors.cutStart, scissors.cutTurn, scissors.cutTarget);
-  ...
-}
-
-// After (in a new game.js, pure):
-export function applyCompletedCut(poly, scissors, gameState, config) {
-  const newPoly = nibblePolygon(poly, scissors.cutStart, scissors.cutTurn, scissors.cutTarget);
-  const score = Math.round(polygonArea(newPoly) / gameState.originalArea * 10000) / 100;
-  return { newPoly, score, won: score < config.winThreshold };
-}
-
-// main.js becomes thin:
-const result = applyCompletedCut(poly, scissors, gameState, config);
-poly = result.newPoly;
-gameState.score = result.score;
-```
-
-The logic function takes everything it needs as explicit arguments and returns a result. `main.js` stays as the orchestrator — it owns the game loop, state mutations, and rendering calls — but it delegates computations to testable functions.
-
-Suggested new module: `game.js` (or `update.js`) containing:
-- `applyCompletedCut(poly, scissors, gameState, config)`
-- `applyStraightCut(poly, scissors, gameState, config)`
-- `reconcileBalls(poly, balls, config, originalArea)` → returns new balls array
-- `checkCutCollision(balls, scissors)` → returns bool
-
----
-
-## Principle: Separate Update from Draw
-
-`update()` in `main.js` currently calls `drawTimer()` and `drawLiveScore()` as side effects. This is a subtle violation — logic and rendering are interleaved.
-
-Rule: `update(dt)` computes new state. `render()` reads state and draws. No drawing in update.
-
-```js
-// Move these out of update():
-drawTimer(gameState.timeRemaining);    // → belongs in render()
-drawLiveScore(liveScore);              // → belongs in render(), compute liveScore there too
-```
-
-This makes `update()` a function you can call in tests with a fake `dt` and inspect state changes without needing a canvas.
-
----
-
-## Principle: Dependency Injection for State and Config
-
-`gameState` and `config` are global mutable singletons. This works for the game but makes isolated testing harder — tests that mutate globals leak state into each other.
-
-For functions extracted to `game.js`, always receive state/config as parameters rather than importing the global. `main.js` passes the real globals. Tests pass a fresh object each time:
-
-```js
-// test
-const state = { score: 100, originalArea: 10000, successfulCuts: 0, failedCuts: 0 };
-const result = applyCompletedCut(poly, scissors, state, config);
-// state is not mutated — result is returned
-```
-
-`polygon.js` already follows this correctly: all functions take `poly` as a parameter, never import a global polygon.
+No current violations.
 
 ---
 
@@ -200,20 +90,12 @@ const result = applyCompletedCut(poly, scissors, state, config);
 - `collision.js`, `scoring.js` — already pure.
 - The rendering pipeline — `renderer.js` is a platform module, coupling to other modules from within it is acceptable.
 - `state.js` constants — fine as-is.
-- `ball.js` — `createBall` uses `Math.random` internally; this is acceptable for now. If deterministic testing of spawn position becomes needed, pass a `rng` function as a parameter.
-
----
-
-## Priority Order
-
-1. **Fix `scissors.js`** — add `input` parameter to `updateScissorsMovement`, remove `import { isKeyDown }`. Immediate gain: `scissors.js` becomes fully unit-testable.
-2. **Extract `game.js`** — move `reconcileBalls`, `completeCut`, `completeStraightCut`, `checkCutCollision` out of `main.js` as pure functions.
-3. **Move draw calls out of `update()`** — `drawTimer` and `drawLiveScore` belong in `render()`.
-
-The browser game continues to work identically. The only change is that platform wiring (`isKeyDown` → `input` object) happens in `main.js` instead of inside game logic modules.
+- `ball.js` — `createBall` uses `Math.random` internally; acceptable for now. If deterministic testing of spawn position becomes needed, pass a `rng` function as a parameter.
 
 ---
 
 ## Fixes Applied
 
 **`scissors.js` (2026-03-15):** Removed `import { isKeyDown }`. Added `input: { left, right }` parameter to `updateScissorsMovement`. `main.js` builds that object from `isKeyDown` and passes it in. `scissors.js` is now fully unit-testable.
+
+**`game.js` (2026-03-15):** Extracted `reconcileBalls`, `completeCut` → `applyCompletedCut`, `completeStraightCut` → `applyStraightCut`, and `checkCutCollision` out of `main.js` as pure exported functions. `main.js` delegates to these and handles state mutations and rendering. `drawTimer` and `drawLiveScore` moved from `update()` into `render()`.

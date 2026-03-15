@@ -3,39 +3,17 @@ import { initTouch, consumeTouchDelta, setDoubleTapCallback } from './touch.js';
 import { config } from './config.js';
 import { gameState, setState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
 import { createInitialRectangle } from './rectangle.js';
-import { createPolygonFromRect, polygonArea, nibblePolygon, splitPolygon, raycastToEdge } from './polygon.js';
+import { createPolygonFromRect, polygonArea, raycastToEdge } from './polygon.js';
 import { clearCanvas, drawPolygon, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawPreviewLine, drawBalls } from './renderer.js';
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
 import { initInput, consumeKeyPress, isKeyDown } from './input.js';
 import { createScissors, updateScissorsMovement, updateScissorsMovementTouch, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut, canCompleteCut, triggerPhase2 } from './scissors.js';
-import { createBall, updateBall, isBallInPolygon } from './ball.js';
-import { ballIntersectsLCut } from './collision.js';
+import { updateBall } from './ball.js';
 import { calculateScore } from './scoring.js';
+import { reconcileBalls, applyCompletedCut, applyStraightCut, checkCutCollision } from './game.js';
 
 console.log('isMobile:', isMobile);
-
-function reconcileBalls(poly) {
-  const area = polygonArea(poly);
-  gameState.balls = gameState.balls.filter(b => isBallInPolygon(b, poly));
-  const areaPercent = gameState.originalArea > 0 ? (area / gameState.originalArea) * 100 : 100;
-  const progressFactor = 1 + config.densityRampK * (1 - areaPercent / 100);
-  const effectiveDensity = config.ballDensityPx2 / progressFactor;
-  const target = Math.max(config.minBalls, Math.floor(area / effectiveDensity));
-  const delta = target - gameState.balls.length;
-  console.log(effectiveDensity)
-  if (delta > 0) {
-    for (let i = 0; i < delta; i++) {
-      gameState.balls.push(createBall(poly, config));
-    }
-  } else if (delta < 0) {
-    for (let i = gameState.balls.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [gameState.balls[i], gameState.balls[j]] = [gameState.balls[j], gameState.balls[i]];
-    }
-    gameState.balls.length = target;
-  }
-}
 
 const CANVAS_PADDING = 40;
 const MOBILE_CANVAS_PADDING = 16;
@@ -76,7 +54,7 @@ let poly = createPolygonFromRect(rect);
 let scissors = createScissors(poly);
 gameState.originalArea = polygonArea(poly);
 gameState.timeRemaining = config.timerDuration;
-reconcileBalls(poly);
+gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
 
 applyConfigToPanel();
 initInput();
@@ -99,11 +77,8 @@ initUI(() => {
   scissors = createScissors(poly);
   gameState.originalArea = polygonArea(poly);
   gameState.balls = [];
-  reconcileBalls(poly);
+  gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
 });
-
-drawScore(gameState.score);
-drawTimer(gameState.timeRemaining);
 
 let lastTime = performance.now();
 
@@ -133,13 +108,6 @@ function gameLoop(now) {
 
 function update(dt) {
   gameState.timeRemaining = Math.max(0, gameState.timeRemaining - dt);
-  drawTimer(gameState.timeRemaining);
-
-  const liveScore = calculateScore(
-    gameState.score, false, gameState.timeRemaining, config.timerDuration,
-    gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
-  );
-  drawLiveScore(liveScore);
 
   if (gameState.timeRemaining <= 0) {
     gameState.finalScore = calculateScore(
@@ -171,7 +139,7 @@ function update(dt) {
     if (isMobile) consumeTouchDelta(); // drain to prevent accumulated delta after cut ends
     updateScissorsCut(scissors, poly, dt, config);
 
-    if (checkCutCollision()) {
+    if (checkCutCollision(gameState.balls, scissors)) {
       gameState.failedCuts++;
       cancelCut(scissors);
       setState(RUNNING);
@@ -205,13 +173,13 @@ function update(dt) {
 
 function completeCut() {
   gameState.successfulCuts++;
-  const newPoly = nibblePolygon(poly, scissors.cutStart, scissors.cutTurn, scissors.cutTarget);
-  repositionScissorsAfterCut(scissors, newPoly);
-  poly = newPoly;
-  reconcileBalls(poly);
-  gameState.score = Math.round(polygonArea(poly) / gameState.originalArea * 10000) / 100;
+  const result = applyCompletedCut(poly, scissors, gameState.originalArea, config);
+  repositionScissorsAfterCut(scissors, result.newPoly);
+  poly = result.newPoly;
+  gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
+  gameState.score = result.score;
   drawScore(gameState.score);
-  if (gameState.score < config.winThreshold) {
+  if (result.won) {
     gameState.finalScore = calculateScore(
       gameState.score, true, gameState.timeRemaining, config.timerDuration,
       gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
@@ -223,21 +191,14 @@ function completeCut() {
 }
 
 function completeStraightCut() {
-  // Exact exit point: raycast from cutStart in cutDirection to opposite boundary
-  const hit = raycastToEdge(
-    scissors.cutStart.x, scissors.cutStart.y,
-    scissors.cutDirection, poly
-  );
-  const exitPoint = hit ? hit.point : scissors.cutCurrent;
-
   gameState.successfulCuts++;
-  const newPoly = splitPolygon(poly, scissors.cutStart, exitPoint);
-  repositionScissorsAfterCut(scissors, newPoly, exitPoint);
-  poly = newPoly;
-  reconcileBalls(poly);
-  gameState.score = Math.round(polygonArea(poly) / gameState.originalArea * 10000) / 100;
+  const result = applyStraightCut(poly, scissors, gameState.originalArea, config);
+  repositionScissorsAfterCut(scissors, result.newPoly, result.exitPoint);
+  poly = result.newPoly;
+  gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
+  gameState.score = result.score;
   drawScore(gameState.score);
-  if (gameState.score < config.winThreshold) {
+  if (result.won) {
     gameState.finalScore = calculateScore(
       gameState.score, true, gameState.timeRemaining, config.timerDuration,
       gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
@@ -248,15 +209,6 @@ function completeStraightCut() {
   setState(RUNNING);
 }
 
-function checkCutCollision() {
-  for (const ball of gameState.balls) {
-    if (ballIntersectsLCut(ball, scissors)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 function render() {
   clearCanvas(ctx, canvas);
   drawPolygon(ctx, poly);
@@ -264,6 +216,12 @@ function render() {
   drawCutLine(ctx, scissors);
   drawPreviewLine(ctx, scissors, poly);
   drawScissors(ctx, scissors, poly);
+  drawTimer(gameState.timeRemaining);
+  const liveScore = calculateScore(
+    gameState.score, false, gameState.timeRemaining, config.timerDuration,
+    gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
+  );
+  drawLiveScore(liveScore);
 
   if (gameState.state === PAUSED) {
     drawPausedOverlay(ctx, canvas);

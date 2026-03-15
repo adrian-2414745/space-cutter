@@ -1,6 +1,5 @@
 import { gameState, setState, IDLE, RUNNING } from './state.js';
 import { config, loadConfigFromPanel, applyConfigToPanel, resetConfigToDefaults } from './config.js';
-import { createInitialRectangle } from './rectangle.js';
 import { drawScore, drawLiveScore, drawTimer } from './renderer.js';
 import { isMobile } from './mobile.js';
 
