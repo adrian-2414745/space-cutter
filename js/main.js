@@ -5,22 +5,17 @@ import { gameState, setState, resetState, RUNNING, CUTTING, PAUSED, GAME_OVER, W
 import { createInitialRectangle } from './rectangle.js';
 import { createPolygonFromRect, polygonArea, raycastToEdge } from './polygon.js';
 import { clearCanvas, drawPolygon, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawPreviewLine, drawBalls } from './renderer.js';
-import { initUI } from './ui.js';
-import { applyConfigToPanel } from './config.js';
+import { initUI, applyConfigToPanel } from './ui.js';
 import { initInput, consumeKeyPress, isKeyDown } from './input.js';
 import { createScissors, updateScissorsMovement, updateScissorsMovementTouch, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut, canCompleteCut, triggerPhase2 } from './scissors.js';
 import { updateBall } from './ball.js';
 import { calculateScore } from './scoring.js';
 import { reconcileBalls, applyCompletedCut, applyStraightCut, checkCutCollision } from './game.js';
 
-console.log('isMobile:', isMobile);
-
 const CANVAS_PADDING = 40;
 const MOBILE_CANVAS_PADDING = 16;
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
 
-let mobileSizing = null;
+let canvas, ctx, mobileSizing;
 
 function resizeCanvas() {
   if (isMobile) {
@@ -49,6 +44,30 @@ function applyMobileSizing() {
 
 let rect, poly, scissors;
 
+export function init() {
+  canvas = document.getElementById('game-canvas');
+  ctx = canvas.getContext('2d');
+
+  resetGameWorld();
+
+  applyConfigToPanel();
+  initInput();
+  if (isMobile) {
+    initTouch(canvas);
+    setDoubleTapCallback(() => {
+      if (gameState.state === RUNNING) {
+        initiateCut(scissors, poly);
+        setState(CUTTING);
+      } else if (gameState.state === CUTTING && canCompleteCut(scissors, poly, config)) {
+        triggerPhase2(scissors, poly);
+      }
+    });
+  }
+  initUI(resetGameWorld);
+
+  requestAnimationFrame(gameLoop);
+}
+
 function resetGameWorld() {
   resetState(config.timerDuration);
   resizeCanvas();
@@ -60,26 +79,10 @@ function resetGameWorld() {
   gameState.balls = reconcileBalls(poly, [], config, gameState.originalArea);
 }
 
-resetGameWorld();
-
-applyConfigToPanel();
-initInput();
-if (isMobile) {
-  initTouch(canvas);
-  setDoubleTapCallback(() => {
-    if (gameState.state === RUNNING) {
-      initiateCut(scissors, poly);
-      setState(CUTTING);
-    } else if (gameState.state === CUTTING && canCompleteCut(scissors, poly, config)) {
-      triggerPhase2(scissors, poly);
-    }
-  });
-}
-initUI(resetGameWorld);
-
-let lastTime = performance.now();
+let lastTime;
 
 function gameLoop(now) {
+  if (lastTime === undefined) lastTime = now;
   const dt = (now - lastTime) / 1000;
   lastTime = now;
 
@@ -229,4 +232,3 @@ function render() {
   }
 }
 
-requestAnimationFrame(gameLoop);

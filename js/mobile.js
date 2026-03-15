@@ -1,4 +1,4 @@
-export const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+export const isMobile = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
 /**
  * Compute mobile-specific visual sizing, locked at game-start.

@@ -1,6 +1,6 @@
 import { isMobile } from './mobile.js';
 
-const DEFAULTS = {
+export const DEFAULTS = {
   rectWidth: 600,
   rectHeight: 600,
   timerDuration: 180,
@@ -18,7 +18,7 @@ const DEFAULTS = {
   minCutDepth: 20,
 };
 
-const MOBILE_DEFAULTS = {
+export const MOBILE_DEFAULTS = {
   ...DEFAULTS,
   timerDuration: 240,
   ballSpeed: 120,
@@ -26,58 +26,3 @@ const MOBILE_DEFAULTS = {
 };
 
 export const config = isMobile ? { ...MOBILE_DEFAULTS } : { ...DEFAULTS };
-
-export function applyConfigToPanel() {
-  document.getElementById('cfg-rect-width').value = config.rectWidth;
-  document.getElementById('cfg-rect-height').value = config.rectHeight;
-  document.getElementById('cfg-timer-duration').value = config.timerDuration;
-  document.getElementById('cfg-scissors-speed').value = config.scissorsBorderSpeed;
-  document.getElementById('cfg-cut-speed').value = config.scissorsCutSpeed;
-  document.getElementById('cfg-corner-snap').value = config.cornerSnapDistance;
-  document.getElementById('cfg-win-threshold').value = config.winThreshold;
-  document.getElementById('cfg-ball-speed').value = config.ballSpeed;
-  document.getElementById('cfg-ball-radius').value = config.ballRadius;
-  document.getElementById('cfg-ball-density').value = config.ballDensityPx2;
-  document.getElementById('cfg-min-balls').value = config.minBalls;
-  document.getElementById('cfg-density-ramp').value = config.densityRampK;
-  document.getElementById('cfg-fail-penalty').value = config.failPenalty;
-  document.getElementById('cfg-touch-sensitivity').value = config.touchSensitivity;
-}
-
-export function resetConfigToDefaults() {
-  const defaults = isMobile ? MOBILE_DEFAULTS : DEFAULTS;
-  Object.assign(config, defaults);
-  applyConfigToPanel();
-}
-
-export function loadConfigFromPanel() {
-  const w = parseInt(document.getElementById('cfg-rect-width').value, 10);
-  const h = parseInt(document.getElementById('cfg-rect-height').value, 10);
-  const t = parseInt(document.getElementById('cfg-timer-duration').value, 10);
-  if (!isMobile) {
-    config.rectWidth = Math.max(600, w || 600);
-    config.rectHeight = Math.max(400, h || 400);
-  }
-  config.timerDuration = Math.max(10, t || 180);
-  const s = parseInt(document.getElementById('cfg-scissors-speed').value, 10);
-  const c = parseInt(document.getElementById('cfg-corner-snap').value, 10);
-  config.scissorsBorderSpeed = Math.max(50, s || 200);
-  const cs = parseInt(document.getElementById('cfg-cut-speed').value, 10);
-  config.scissorsCutSpeed = Math.max(50, cs || 300);
-  config.cornerSnapDistance = c;
-  const wt = parseInt(document.getElementById('cfg-win-threshold').value, 10);
-  config.winThreshold = Math.max(1, wt || 5);
-  const bs = parseInt(document.getElementById('cfg-ball-speed').value, 10);
-  config.ballSpeed = Math.max(10, bs || 150);
-  const br = parseInt(document.getElementById('cfg-ball-radius').value, 10);
-  config.ballRadius = Math.max(2, br || 6);
-  const bd = parseInt(document.getElementById('cfg-ball-density').value, 10);
-  config.ballDensityPx2 = Math.max(1000, bd || 72000);
-  const mb = parseInt(document.getElementById('cfg-min-balls').value, 10);
-  config.minBalls = Math.max(1, mb || 2);
-  const dr = parseFloat(document.getElementById('cfg-density-ramp').value);
-  config.densityRampK = Math.max(0, Math.min(5, dr || 2));
-  config.failPenalty = document.getElementById('cfg-fail-penalty').value;
-  const ts = parseFloat(document.getElementById('cfg-touch-sensitivity').value);
-  config.touchSensitivity = Math.max(0.5, Math.min(5.0, ts || 2.5));
-}
