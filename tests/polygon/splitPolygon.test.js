@@ -1,12 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createPolygonFromRect, splitPolygon, polygonArea, boundingBox } from '../../js/polygon.js';
-
-const testPoly = createPolygonFromRect({ x: 0, y: 0, width: 600, height: 400 });
-
-const LShapedPoly = { vertices: [
-    { x: 0, y: 0 }, { x: 600, y: 0 }, { x: 600, y: 200 },
-    { x: 300, y: 200 }, { x: 300, y: 400 }, { x: 0, y: 400 }
-]};
+import { splitPolygon, polygonArea, boundingBox } from '../../js/polygon.js';
+import { testPoly, LShapedPoly } from '../fixtures.js';
 
 describe('splitPolygon', () => {
     it('horizontal cut keeps the larger sub-polygon', () => {

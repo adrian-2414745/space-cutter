@@ -1,5 +1,5 @@
 import { isKeyDown } from './input.js';
-import { edgeLength, edgeDirection, pointOnEdge, raycastToEdge, getEdges, findEdgeAtPoint } from './polygon.js';
+import { edgeLength, edgeDirection, pointOnEdge, raycastToEdge, findEdgeAtPoint } from './polygon.js';
 
 // ---------------------------------------------------------------------------
 // Direction helpers
