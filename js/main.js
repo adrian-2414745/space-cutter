@@ -43,6 +43,7 @@ function applyMobileSizing() {
 }
 
 let rect, poly, scissors;
+let pendingDoubleTap = false;
 
 export function init() {
   canvas = document.getElementById('game-canvas');
@@ -54,29 +55,36 @@ export function init() {
   initInput();
   if (isMobile) {
     initTouch(canvas);
-    setDoubleTapCallback(() => {
-      if (gameState.state === RUNNING) {
-        initiateCut(scissors, poly);
-        setState(CUTTING);
-      } else if (gameState.state === CUTTING && canCompleteCut(scissors, poly, config)) {
-        triggerPhase2(scissors, poly);
-      }
-    });
+    setDoubleTapCallback(() => { pendingDoubleTap = true; });
   }
   initUI(resetGameWorld);
 
   requestAnimationFrame(gameLoop);
 }
 
-function resetGameWorld() {
+export function resetGameWorld() {
   resetState(config.timerDuration);
-  resizeCanvas();
-  applyMobileSizing();
-  rect = createInitialRectangle(config, canvas.width, canvas.height);
+  if (canvas) {
+    resizeCanvas();
+    applyMobileSizing();
+    rect = createInitialRectangle(config, canvas.width, canvas.height);
+  }
   poly = createPolygonFromRect(rect);
   scissors = createScissors(poly);
   gameState.originalArea = polygonArea(poly);
   gameState.balls = reconcileBalls(poly, [], config, gameState.originalArea);
+}
+
+export function initGameWorld(initialRect) {
+  rect = initialRect;
+  poly = createPolygonFromRect(rect);
+  scissors = createScissors(poly);
+  gameState.originalArea = polygonArea(poly);
+  gameState.balls = reconcileBalls(poly, [], config, gameState.originalArea);
+}
+
+export function getWorld() {
+  return { poly, scissors, rect };
 }
 
 let lastTime;
@@ -86,7 +94,24 @@ function gameLoop(now) {
   const dt = (now - lastTime) / 1000;
   lastTime = now;
 
-  if (!isMobile && (consumeKeyPress('p') || consumeKeyPress('P'))) {
+  const touchDelta = isMobile ? consumeTouchDelta() : null;
+  const input = {
+    isMobile,
+    left: isKeyDown('ArrowLeft'),
+    right: isKeyDown('ArrowRight'),
+    action: isMobile ? pendingDoubleTap : consumeKeyPress(' '),
+    pausePressed: !isMobile && (consumeKeyPress('p') || consumeKeyPress('P')),
+    touchDeltaX: touchDelta ? touchDelta.x : 0,
+  };
+  pendingDoubleTap = false;
+
+  update(dt, input);
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+export function update(dt, input) {
+  if (input.pausePressed) {
     if (gameState.state === RUNNING || gameState.state === CUTTING) {
       gameState.previousState = gameState.state;
       setState(PAUSED);
@@ -96,17 +121,10 @@ function gameLoop(now) {
     }
   }
 
-  if (gameState.state === RUNNING || gameState.state === CUTTING) {
-    update(dt);
-  } else {
-    consumeKeyPress(' ');
+  if (gameState.state !== RUNNING && gameState.state !== CUTTING) {
+    return;
   }
 
-  render();
-  requestAnimationFrame(gameLoop);
-}
-
-function update(dt) {
   gameState.timeRemaining = Math.max(0, gameState.timeRemaining - dt);
 
   if (gameState.timeRemaining <= 0) {
@@ -118,25 +136,20 @@ function update(dt) {
     return;
   }
 
-  for (const ball of gameState.balls) {
-    updateBall(ball, poly, dt);
-  }
+  gameState.balls = gameState.balls.map(b => updateBall(b, poly, dt));
 
   if (gameState.state === RUNNING) {
-    if (isMobile) {
-      const { x: tdx } = consumeTouchDelta();
-      updateScissorsMovementTouch(scissors, poly, config, tdx);
+    if (input.isMobile) {
+      updateScissorsMovementTouch(scissors, poly, config, input.touchDeltaX);
     } else {
-      const input = { left: isKeyDown('ArrowLeft'), right: isKeyDown('ArrowRight') };
-      updateScissorsMovement(scissors, poly, dt, config, input);
+      updateScissorsMovement(scissors, poly, dt, config, { left: input.left, right: input.right });
     }
 
-    if (!isMobile && consumeKeyPress(' ')) {
+    if (input.action) {
       initiateCut(scissors, poly);
       setState(CUTTING);
     }
   } else if (gameState.state === CUTTING) {
-    if (isMobile) consumeTouchDelta(); // drain to prevent accumulated delta after cut ends
     updateScissorsCut(scissors, poly, dt, config);
 
     if (checkCutCollision(gameState.balls, scissors)) {
@@ -147,8 +160,8 @@ function update(dt) {
     }
 
     if (scissors.cutPhase === 1) {
-      // Player-triggered Phase 2: spacebar/double-tap while in Phase 1 (takes priority)
-      const playerTriggered = !isMobile && consumeKeyPress(' ') && canCompleteCut(scissors, poly, config);
+      // Player-triggered Phase 2: action (spacebar/double-tap) while in Phase 1
+      const playerTriggered = input.action && canCompleteCut(scissors, poly, config);
 
       if (playerTriggered) {
         triggerPhase2(scissors, poly);

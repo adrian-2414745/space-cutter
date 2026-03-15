@@ -12,8 +12,9 @@ export function createBall(poly, config) {
 }
 
 export function updateBall(ball, poly, dt) {
-  ball.x += ball.vx * dt;
-  ball.y += ball.vy * dt;
+  let { x, y, vx, vy, radius } = ball;
+  x += vx * dt;
+  y += vy * dt;
 
   const edges = getEdges(poly);
   for (const edge of edges) {
@@ -39,18 +40,18 @@ export function updateBall(ball, poly, dt) {
       // Use averaged Y so sub-pixel differences don't shift the boundary
       const edgeY = (edge.y1 + edge.y2) / 2;
 
-      if (ball.x >= minX && ball.x <= maxX) {
+      if (x >= minX && x <= maxX) {
         if (insideBelow) {
-          const limit = edgeY + ball.radius;
-          if (ball.y < limit) {
-            ball.y = limit;
-            ball.vy = Math.abs(ball.vy);
+          const limit = edgeY + radius;
+          if (y < limit) {
+            y = limit;
+            vy = Math.abs(vy);
           }
         } else {
-          const limit = edgeY - ball.radius;
-          if (ball.y > limit) {
-            ball.y = limit;
-            ball.vy = -Math.abs(ball.vy);
+          const limit = edgeY - radius;
+          if (y > limit) {
+            y = limit;
+            vy = -Math.abs(vy);
           }
         }
       }
@@ -62,23 +63,25 @@ export function updateBall(ball, poly, dt) {
       // Use averaged X so sub-pixel differences don't shift the boundary
       const edgeX = (edge.x1 + edge.x2) / 2;
 
-      if (ball.y >= minY && ball.y <= maxY) {
+      if (y >= minY && y <= maxY) {
         if (insideRight) {
-          const limit = edgeX + ball.radius;
-          if (ball.x < limit) {
-            ball.x = limit;
-            ball.vx = Math.abs(ball.vx);
+          const limit = edgeX + radius;
+          if (x < limit) {
+            x = limit;
+            vx = Math.abs(vx);
           }
         } else {
-          const limit = edgeX - ball.radius;
-          if (ball.x > limit) {
-            ball.x = limit;
-            ball.vx = -Math.abs(ball.vx);
+          const limit = edgeX - radius;
+          if (x > limit) {
+            x = limit;
+            vx = -Math.abs(vx);
           }
         }
       }
     }
   }
+
+  return { x, y, vx, vy, radius };
 }
 
 export function isBallInPolygon(ball, poly) {
