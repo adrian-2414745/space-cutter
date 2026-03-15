@@ -1,0 +1,25 @@
+{
+  "name": "space-cutter",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adrian-2414745/space-cutter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/adrian-2414745/space-cutter/issues"
+  },
+  "homepage": "https://github.com/adrian-2414745/space-cutter#readme",
+  "devDependencies": {
+    "vitest": "^4.1.0"
+  }
+}

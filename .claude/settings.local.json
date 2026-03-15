@@ -3,7 +3,9 @@
     "allow": [
       "Bash(start:*)",
       "Bash(/tmp/analysis.txt:*)",
-      "Read(//tmp/**)"
+      "Read(//tmp/**)",
+      "Bash(wc:*)",
+      "Bash(npm test:*)"
     ]
   },
   "model": "opusplan"
