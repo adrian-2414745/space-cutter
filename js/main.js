@@ -140,21 +140,21 @@ export function update(dt, input) {
 
   if (gameState.state === RUNNING) {
     if (input.isMobile) {
-      updateScissorsMovementTouch(scissors, poly, config, input.touchDeltaX);
+      scissors = updateScissorsMovementTouch(scissors, poly, config, input.touchDeltaX);
     } else {
-      updateScissorsMovement(scissors, poly, dt, config, { left: input.left, right: input.right });
+      scissors = updateScissorsMovement(scissors, poly, dt, config, { left: input.left, right: input.right });
     }
 
     if (input.action) {
-      initiateCut(scissors, poly);
+      scissors = initiateCut(scissors, poly);
       setState(CUTTING);
     }
   } else if (gameState.state === CUTTING) {
-    updateScissorsCut(scissors, poly, dt, config);
+    scissors = updateScissorsCut(scissors, poly, dt, config);
 
     if (checkCutCollision(gameState.balls, scissors)) {
       gameState.failedCuts++;
-      cancelCut(scissors);
+      scissors = cancelCut(scissors);
       setState(RUNNING);
       return;
     }
@@ -164,7 +164,7 @@ export function update(dt, input) {
       const playerTriggered = input.action && canCompleteCut(scissors, poly, config);
 
       if (playerTriggered) {
-        triggerPhase2(scissors, poly);
+        scissors = triggerPhase2(scissors, poly);
       } else {
         // Auto: when Phase 1 cut reaches opposite boundary → straight cut
         const hit = raycastToEdge(
@@ -187,7 +187,7 @@ export function update(dt, input) {
 function completeCut() {
   gameState.successfulCuts++;
   const result = applyCompletedCut(poly, scissors, gameState.originalArea, config);
-  repositionScissorsAfterCut(scissors, result.newPoly);
+  scissors = repositionScissorsAfterCut(scissors, result.newPoly);
   poly = result.newPoly;
   gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
   gameState.score = result.score;
@@ -206,7 +206,7 @@ function completeCut() {
 function completeStraightCut() {
   gameState.successfulCuts++;
   const result = applyStraightCut(poly, scissors, gameState.originalArea, config);
-  repositionScissorsAfterCut(scissors, result.newPoly, result.exitPoint);
+  scissors = repositionScissorsAfterCut(scissors, result.newPoly, result.exitPoint);
   poly = result.newPoly;
   gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
   gameState.score = result.score;

@@ -49,15 +49,19 @@ export function isAtCorner(scissors, poly) {
 // ---------------------------------------------------------------------------
 
 export function initiateCut(scissors, poly) {
-  scissors.cutting = true;
-  scissors.cutPhase = 1;
-  scissors.cutDirection = edgeDirection(poly, scissors.edgeIndex);
+  const cutDirection = edgeDirection(poly, scissors.edgeIndex);
   const screenPos = getScissorsScreenPosition(scissors, poly);
-  scissors.cutStart = { x: screenPos.x, y: screenPos.y };
-  scissors.cutCurrent = { x: screenPos.x, y: screenPos.y };
-  scissors.cutTurn = null;
-  scissors.cutTarget = null;
-  scissors.cutTurnDirection = null;
+  return {
+    ...scissors,
+    cutting: true,
+    cutPhase: 1,
+    cutDirection,
+    cutStart: { x: screenPos.x, y: screenPos.y },
+    cutCurrent: { x: screenPos.x, y: screenPos.y },
+    cutTurn: null,
+    cutTarget: null,
+    cutTurnDirection: null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -69,8 +73,13 @@ export function updateScissorsCut(scissors, poly, dt, config) {
 
   if (scissors.cutPhase === 1) {
     const v = DIR_VECTORS[scissors.cutDirection];
-    scissors.cutCurrent.x += v.x * speed;
-    scissors.cutCurrent.y += v.y * speed;
+    return {
+      ...scissors,
+      cutCurrent: {
+        x: scissors.cutCurrent.x + v.x * speed,
+        y: scissors.cutCurrent.y + v.y * speed,
+      },
+    };
   } else if (scissors.cutPhase === 2) {
     const v = DIR_VECTORS[scissors.cutTurnDirection];
     const target = scissors.cutTarget;
@@ -79,14 +88,22 @@ export function updateScissorsCut(scissors, poly, dt, config) {
     const remaining = Math.hypot(dx, dy);
 
     if (remaining <= speed) {
-      // Clamp to target
-      scissors.cutCurrent.x = target.x;
-      scissors.cutCurrent.y = target.y;
+      return {
+        ...scissors,
+        cutCurrent: { x: target.x, y: target.y },
+      };
     } else {
-      scissors.cutCurrent.x += v.x * speed;
-      scissors.cutCurrent.y += v.y * speed;
+      return {
+        ...scissors,
+        cutCurrent: {
+          x: scissors.cutCurrent.x + v.x * speed,
+          y: scissors.cutCurrent.y + v.y * speed,
+        },
+      };
     }
   }
+
+  return scissors;
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +111,7 @@ export function updateScissorsCut(scissors, poly, dt, config) {
 // ---------------------------------------------------------------------------
 
 export function triggerPhase2(scissors, poly) {
-  scissors.cutTurn = { x: scissors.cutCurrent.x, y: scissors.cutCurrent.y };
+  const cutTurn = { x: scissors.cutCurrent.x, y: scissors.cutCurrent.y };
 
   const perps = perpendiculars(scissors.cutDirection);
   let bestDir = null;
@@ -110,11 +127,15 @@ export function triggerPhase2(scissors, poly) {
     }
   }
 
-  if (!bestDir) return; // shouldn't happen in well-formed polygon
+  if (!bestDir) return scissors; // shouldn't happen in well-formed polygon
 
-  scissors.cutTurnDirection = bestDir;
-  scissors.cutTarget = bestPoint;
-  scissors.cutPhase = 2;
+  return {
+    ...scissors,
+    cutTurn,
+    cutTurnDirection: bestDir,
+    cutTarget: bestPoint,
+    cutPhase: 2,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -133,14 +154,17 @@ export function checkCutComplete(scissors) {
 // ---------------------------------------------------------------------------
 
 export function cancelCut(scissors) {
-  scissors.cutting = false;
-  scissors.cutPhase = 0;
-  scissors.cutStart = null;
-  scissors.cutCurrent = null;
-  scissors.cutTurn = null;
-  scissors.cutTarget = null;
-  scissors.cutDirection = null;
-  scissors.cutTurnDirection = null;
+  return {
+    ...scissors,
+    cutting: false,
+    cutPhase: 0,
+    cutStart: null,
+    cutCurrent: null,
+    cutTurn: null,
+    cutTarget: null,
+    cutDirection: null,
+    cutTurnDirection: null,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -222,24 +246,31 @@ export function getPreviewLine(scissors, poly) {
 export function repositionScissorsAfterCut(scissors, poly, targetPoint) {
   // Use provided targetPoint, or fall back to cutTurn (L-cut default)
   const pt = targetPoint || scissors.cutTurn;
+  let newEdgeIndex, newPos;
+
   if (pt) {
     const edgeIdx = findEdgeAtPoint(poly, pt.x, pt.y);
     if (edgeIdx !== -1) {
-      scissors.edgeIndex = edgeIdx;
+      newEdgeIndex = edgeIdx;
       const verts = poly.vertices;
       const a = verts[edgeIdx];
-      scissors.pos = Math.hypot(pt.x - a.x, pt.y - a.y);
+      newPos = Math.hypot(pt.x - a.x, pt.y - a.y);
     } else {
-      scissors.edgeIndex = 0;
-      scissors.pos = edgeLength(poly, 0) / 2;
+      newEdgeIndex = 0;
+      newPos = edgeLength(poly, 0) / 2;
     }
   } else {
-    scissors.edgeIndex = 0;
-    scissors.pos = edgeLength(poly, 0) / 2;
+    newEdgeIndex = 0;
+    newPos = edgeLength(poly, 0) / 2;
   }
 
-  // Reset cut state
-  cancelCut(scissors);
+  // Reset cut state via cancelCut, then apply new position
+  const cancelled = cancelCut(scissors);
+  return {
+    ...cancelled,
+    edgeIndex: newEdgeIndex,
+    pos: newPos,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -265,36 +296,39 @@ export function updateScissorsMovement(scissors, poly, dt, config, input) {
   if (input.right) delta += speed;
   if (input.left) delta -= speed;
 
-  if (delta === 0) return;
+  if (delta === 0) return scissors;
 
-  scissors.pos += delta;
+  let newPos = scissors.pos + delta;
+  let newEdgeIndex = scissors.edgeIndex;
 
   // Corner wrapping
-  if (scissors.pos < 0) {
-    const prevIndex = (scissors.edgeIndex - 1 + n) % n;
-    scissors.edgeIndex = prevIndex;
-    scissors.pos = edgeLength(poly, prevIndex) + scissors.pos; // pos is negative, so this subtracts
+  if (newPos < 0) {
+    const prevIndex = (newEdgeIndex - 1 + n) % n;
+    newEdgeIndex = prevIndex;
+    newPos = edgeLength(poly, prevIndex) + newPos; // newPos is negative, so this subtracts
     // Clamp in case overflow was large
-    scissors.pos = Math.max(0, scissors.pos);
-    return;
+    newPos = Math.max(0, newPos);
+    return { ...scissors, edgeIndex: newEdgeIndex, pos: newPos };
   }
 
-  if (scissors.pos > len) {
-    const overflow = scissors.pos - len;
-    const nextIndex = (scissors.edgeIndex + 1) % n;
-    scissors.edgeIndex = nextIndex;
-    scissors.pos = overflow;
+  if (newPos > len) {
+    const overflow = newPos - len;
+    const nextIndex = (newEdgeIndex + 1) % n;
+    newEdgeIndex = nextIndex;
+    newPos = overflow;
     // Clamp in case overflow was large
-    scissors.pos = Math.min(scissors.pos, edgeLength(poly, nextIndex));
-    return;
+    newPos = Math.min(newPos, edgeLength(poly, nextIndex));
+    return { ...scissors, edgeIndex: newEdgeIndex, pos: newPos };
   }
 
   // Corner snapping: snap when within cornerSnapDistance and moving toward corner
-  if (delta < 0 && scissors.pos < config.cornerSnapDistance) {
-    scissors.pos = 0;
-  } else if (delta > 0 && scissors.pos > len - config.cornerSnapDistance) {
-    scissors.pos = len;
+  if (delta < 0 && newPos < config.cornerSnapDistance) {
+    newPos = 0;
+  } else if (delta > 0 && newPos > len - config.cornerSnapDistance) {
+    newPos = len;
   }
+
+  return { ...scissors, edgeIndex: newEdgeIndex, pos: newPos };
 }
 
 // ---------------------------------------------------------------------------
@@ -308,26 +342,29 @@ export function updateScissorsMovementTouch(scissors, poly, config, dx) {
   // Swipe right = CW (positive dx), swipe left = CCW (negative dx)
   const perimeterDelta = dx * config.touchSensitivity;
 
-  if (Math.abs(perimeterDelta) < 0.01) return;
+  if (Math.abs(perimeterDelta) < 0.01) return scissors;
 
-  scissors.pos += perimeterDelta;
+  let newPos = scissors.pos + perimeterDelta;
+  let newEdgeIndex = scissors.edgeIndex;
 
   // Corner wrapping
-  if (scissors.pos > len) {
-    const nextIndex = (scissors.edgeIndex + 1) % n;
-    scissors.edgeIndex = nextIndex;
-    scissors.pos = 0;
-  } else if (scissors.pos < 0) {
-    const prevIndex = (scissors.edgeIndex - 1 + n) % n;
-    scissors.edgeIndex = prevIndex;
-    scissors.pos = edgeLength(poly, prevIndex);
+  if (newPos > len) {
+    const nextIndex = (newEdgeIndex + 1) % n;
+    newEdgeIndex = nextIndex;
+    newPos = 0;
+  } else if (newPos < 0) {
+    const prevIndex = (newEdgeIndex - 1 + n) % n;
+    newEdgeIndex = prevIndex;
+    newPos = edgeLength(poly, prevIndex);
   }
 
   // Corner snapping
-  const newLen = edgeLength(poly, scissors.edgeIndex);
-  if (perimeterDelta < 0 && scissors.pos < config.cornerSnapDistance) {
-    scissors.pos = 0;
-  } else if (perimeterDelta > 0 && scissors.pos > newLen - config.cornerSnapDistance) {
-    scissors.pos = newLen;
+  const newLen = edgeLength(poly, newEdgeIndex);
+  if (perimeterDelta < 0 && newPos < config.cornerSnapDistance) {
+    newPos = 0;
+  } else if (perimeterDelta > 0 && newPos > newLen - config.cornerSnapDistance) {
+    newPos = newLen;
   }
+
+  return { ...scissors, edgeIndex: newEdgeIndex, pos: newPos };
 }

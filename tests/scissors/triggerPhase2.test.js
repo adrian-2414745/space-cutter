@@ -26,55 +26,68 @@ function makeScissors(x, y, cutDirection) {
 describe('triggerPhase2 — cutTurn and cutPhase', () => {
   it('1: sets cutTurn to current cutCurrent position', () => {
     const scissors = makeScissors(300, 100, 'down');
-    triggerPhase2(scissors, testPoly);
-    expect(scissors.cutTurn).toEqual({ x: 300, y: 100 });
+    const result = triggerPhase2(scissors, testPoly);
+    expect(result.cutTurn).toEqual({ x: 300, y: 100 });
   });
 
   it('2: sets cutPhase to 2', () => {
     const scissors = makeScissors(300, 100, 'down');
-    triggerPhase2(scissors, testPoly);
-    expect(scissors.cutPhase).toBe(2);
+    const result = triggerPhase2(scissors, testPoly);
+    expect(result.cutPhase).toBe(2);
   });
 });
 
 describe('triggerPhase2 — direction and target selection (cutDirection=down)', () => {
   it('3: at x=100, y=100, cutDirection=down — picks left (dist=100 vs right dist=500)', () => {
     const scissors = makeScissors(100, 100, 'down');
-    triggerPhase2(scissors, testPoly);
-    expect(scissors.cutTurnDirection).toBe('left');
-    expect(scissors.cutTarget).toEqual({ x: 0, y: 100 });
+    const result = triggerPhase2(scissors, testPoly);
+    expect(result.cutTurnDirection).toBe('left');
+    expect(result.cutTarget).toEqual({ x: 0, y: 100 });
   });
 
   it('4: at x=500, y=100, cutDirection=down — picks right (dist=100 vs left dist=500)', () => {
     const scissors = makeScissors(500, 100, 'down');
-    triggerPhase2(scissors, testPoly);
-    expect(scissors.cutTurnDirection).toBe('right');
-    expect(scissors.cutTarget).toEqual({ x: 600, y: 100 });
+    const result = triggerPhase2(scissors, testPoly);
+    expect(result.cutTurnDirection).toBe('right');
+    expect(result.cutTarget).toEqual({ x: 600, y: 100 });
   });
 });
 
 describe('triggerPhase2 — direction and target selection (cutDirection=right)', () => {
   it('5: at x=200, y=100, cutDirection=right — picks up (dist=100 vs down dist=300)', () => {
     const scissors = makeScissors(200, 100, 'right');
-    triggerPhase2(scissors, testPoly);
-    expect(scissors.cutTurnDirection).toBe('up');
-    expect(scissors.cutTarget).toEqual({ x: 200, y: 0 });
+    const result = triggerPhase2(scissors, testPoly);
+    expect(result.cutTurnDirection).toBe('up');
+    expect(result.cutTarget).toEqual({ x: 200, y: 0 });
   });
 
   it('6: at x=200, y=300, cutDirection=right — picks down (dist=100 vs up dist=300)', () => {
     const scissors = makeScissors(200, 300, 'right');
-    triggerPhase2(scissors, testPoly);
-    expect(scissors.cutTurnDirection).toBe('down');
-    expect(scissors.cutTarget).toEqual({ x: 200, y: 400 });
+    const result = triggerPhase2(scissors, testPoly);
+    expect(result.cutTurnDirection).toBe('down');
+    expect(result.cutTarget).toEqual({ x: 200, y: 400 });
   });
 });
 
 describe('triggerPhase2 — cutTurnDirection is a valid perpendicular', () => {
   it('7: for cutDirection=down, result is left or right (not down)', () => {
     const scissors = makeScissors(300, 100, 'down');
+    const result = triggerPhase2(scissors, testPoly);
+    expect(['left', 'right']).toContain(result.cutTurnDirection);
+    expect(result.cutTurnDirection).not.toBe('down');
+    expect(result.cutTurnDirection).not.toBe('up');
+  });
+});
+
+describe('triggerPhase2 — does not mutate input', () => {
+  it('8: does not mutate input scissors', () => {
+    const scissors = makeScissors(300, 100, 'down');
+    const origCutPhase = scissors.cutPhase;
+    const origCutTurn = scissors.cutTurn;
+    const origCutTurnDirection = scissors.cutTurnDirection;
     triggerPhase2(scissors, testPoly);
-    expect(['left', 'right']).toContain(scissors.cutTurnDirection);
-    expect(scissors.cutTurnDirection).not.toBe('down');
-    expect(scissors.cutTurnDirection).not.toBe('up');
+    expect(scissors.cutPhase).toBe(origCutPhase);
+    expect(scissors.cutTurn).toBe(origCutTurn);
+    expect(scissors.cutTurnDirection).toBe(origCutTurnDirection);
   });
 });

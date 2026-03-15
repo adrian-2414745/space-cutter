@@ -14,50 +14,50 @@ function makeActiveScissors() {
 describe('cancelCut', () => {
   it('1: sets cutting to false', () => {
     const scissors = makeActiveScissors();
-    cancelCut(scissors);
-    expect(scissors.cutting).toBe(false);
+    const result = cancelCut(scissors);
+    expect(result.cutting).toBe(false);
   });
 
   it('2: sets cutPhase to 0', () => {
     const scissors = makeActiveScissors();
-    cancelCut(scissors);
-    expect(scissors.cutPhase).toBe(0);
+    const result = cancelCut(scissors);
+    expect(result.cutPhase).toBe(0);
   });
 
   it('3: sets cutStart to null', () => {
     const scissors = makeActiveScissors();
-    cancelCut(scissors);
-    expect(scissors.cutStart).toBeNull();
+    const result = cancelCut(scissors);
+    expect(result.cutStart).toBeNull();
   });
 
   it('4: sets cutCurrent to null', () => {
     const scissors = makeActiveScissors();
-    cancelCut(scissors);
-    expect(scissors.cutCurrent).toBeNull();
+    const result = cancelCut(scissors);
+    expect(result.cutCurrent).toBeNull();
   });
 
   it('5: sets cutTurn to null', () => {
     const scissors = makeActiveScissors();
-    cancelCut(scissors);
-    expect(scissors.cutTurn).toBeNull();
+    const result = cancelCut(scissors);
+    expect(result.cutTurn).toBeNull();
   });
 
   it('6: sets cutTarget to null', () => {
     const scissors = makeActiveScissors();
-    cancelCut(scissors);
-    expect(scissors.cutTarget).toBeNull();
+    const result = cancelCut(scissors);
+    expect(result.cutTarget).toBeNull();
   });
 
   it('7: sets cutDirection to null', () => {
     const scissors = makeActiveScissors();
-    cancelCut(scissors);
-    expect(scissors.cutDirection).toBeNull();
+    const result = cancelCut(scissors);
+    expect(result.cutDirection).toBeNull();
   });
 
   it('8: sets cutTurnDirection to null', () => {
     const scissors = makeActiveScissors();
-    cancelCut(scissors);
-    expect(scissors.cutTurnDirection).toBeNull();
+    const result = cancelCut(scissors);
+    expect(result.cutTurnDirection).toBeNull();
   });
 
   it('9: calling cancelCut on already-idle scissors is safe (no errors, all still null/false/0)', () => {
@@ -68,14 +68,24 @@ describe('cancelCut', () => {
       cutTurn: null, cutTarget: null,
       cutDirection: null, cutTurnDirection: null,
     };
-    expect(() => cancelCut(scissors)).not.toThrow();
-    expect(scissors.cutting).toBe(false);
-    expect(scissors.cutPhase).toBe(0);
-    expect(scissors.cutStart).toBeNull();
-    expect(scissors.cutCurrent).toBeNull();
-    expect(scissors.cutTurn).toBeNull();
-    expect(scissors.cutTarget).toBeNull();
-    expect(scissors.cutDirection).toBeNull();
-    expect(scissors.cutTurnDirection).toBeNull();
+    let result;
+    expect(() => { result = cancelCut(scissors); }).not.toThrow();
+    expect(result.cutting).toBe(false);
+    expect(result.cutPhase).toBe(0);
+    expect(result.cutStart).toBeNull();
+    expect(result.cutCurrent).toBeNull();
+    expect(result.cutTurn).toBeNull();
+    expect(result.cutTarget).toBeNull();
+    expect(result.cutDirection).toBeNull();
+    expect(result.cutTurnDirection).toBeNull();
+  });
+
+  it('10: does not mutate input scissors', () => {
+    const scissors = makeActiveScissors();
+    const originalCutting = scissors.cutting;
+    const originalCutPhase = scissors.cutPhase;
+    cancelCut(scissors);
+    expect(scissors.cutting).toBe(originalCutting);
+    expect(scissors.cutPhase).toBe(originalCutPhase);
   });
 });
