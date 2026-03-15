@@ -1,4 +1,3 @@
-import { isKeyDown } from './input.js';
 import { edgeLength, edgeDirection, pointOnEdge, raycastToEdge, findEdgeAtPoint } from './polygon.js';
 
 // ---------------------------------------------------------------------------
@@ -255,15 +254,16 @@ export function getScissorsScreenPosition(scissors, poly) {
 // 13. updateScissorsMovement (keyboard)
 // ---------------------------------------------------------------------------
 
-export function updateScissorsMovement(scissors, poly, dt, config) {
+export function updateScissorsMovement(scissors, poly, dt, config, input) {
   const speed = config.scissorsBorderSpeed * dt;
   const len = edgeLength(poly, scissors.edgeIndex);
   const n = poly.vertices.length;
 
   // Right = CW (increasing pos), Left = CCW (decreasing pos)
+  // input = { left: bool, right: bool }
   let delta = 0;
-  if (isKeyDown('ArrowRight')) delta += speed;
-  if (isKeyDown('ArrowLeft')) delta -= speed;
+  if (input.right) delta += speed;
+  if (input.left) delta -= speed;
 
   if (delta === 0) return;
 

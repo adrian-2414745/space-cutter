@@ -6,7 +6,8 @@
       "Read(//tmp/**)",
       "Bash(wc:*)",
       "Bash(npm test:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(npx vitest:*)"
     ]
   },
   "model": "opusplan"

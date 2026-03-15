@@ -7,7 +7,7 @@ import { createPolygonFromRect, polygonArea, nibblePolygon, splitPolygon, raycas
 import { clearCanvas, drawPolygon, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawPreviewLine, drawBalls } from './renderer.js';
 import { initUI } from './ui.js';
 import { applyConfigToPanel } from './config.js';
-import { initInput, consumeKeyPress } from './input.js';
+import { initInput, consumeKeyPress, isKeyDown } from './input.js';
 import { createScissors, updateScissorsMovement, updateScissorsMovementTouch, initiateCut, updateScissorsCut, checkCutComplete, repositionScissorsAfterCut, cancelCut, canCompleteCut, triggerPhase2 } from './scissors.js';
 import { createBall, updateBall, isBallInPolygon } from './ball.js';
 import { ballIntersectsLCut } from './collision.js';
@@ -159,7 +159,8 @@ function update(dt) {
       const { x: tdx } = consumeTouchDelta();
       updateScissorsMovementTouch(scissors, poly, config, tdx);
     } else {
-      updateScissorsMovement(scissors, poly, dt, config);
+      const input = { left: isKeyDown('ArrowLeft'), right: isKeyDown('ArrowRight') };
+      updateScissorsMovement(scissors, poly, dt, config, input);
     }
 
     if (!isMobile && consumeKeyPress(' ')) {

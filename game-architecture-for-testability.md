@@ -66,9 +66,9 @@ The codebase is already partially well-structured. Before prescribing changes, i
 - `collision.js` — takes ball + scissors objects, returns bool.
 - `scoring.js` — pure calculation, takes numbers, returns number.
 - `ball.js` — 3 functions, only imports from `polygon.js`. Nearly pure (uses `Math.random` internally in `createBall`).
-
+- `scissors.js` 
 **Not yet testable:**
-- `scissors.js` — `updateScissorsMovement` imports `isKeyDown` from `input.js`, which reads `document` keyboard state. One browser dependency poisons the whole module for unit testing.
+
 - `main.js` — The `update()` function mixes game logic, state mutation, and rendering calls (`drawTimer`, `drawLiveScore`). `reconcileBalls`, `completeCut`, `completeStraightCut` contain real game logic but are trapped as private closures inside `main.js`.
 
 ---
@@ -211,3 +211,9 @@ const result = applyCompletedCut(poly, scissors, state, config);
 3. **Move draw calls out of `update()`** — `drawTimer` and `drawLiveScore` belong in `render()`.
 
 The browser game continues to work identically. The only change is that platform wiring (`isKeyDown` → `input` object) happens in `main.js` instead of inside game logic modules.
+
+---
+
+## Fixes Applied
+
+**`scissors.js` (2026-03-15):** Removed `import { isKeyDown }`. Added `input: { left, right }` parameter to `updateScissorsMovement`. `main.js` builds that object from `isKeyDown` and passes it in. `scissors.js` is now fully unit-testable.
