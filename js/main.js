@@ -80,18 +80,6 @@ export function resetGameWorld() {
   gameState.balls = reconcileBalls(gameState.poly, [], config, gameState.originalArea);
 }
 
-export function initGameWorld(initialRect) {
-  gameState.rect = initialRect;
-  gameState.poly = createPolygonFromRect(gameState.rect);
-  gameState.scissors = createScissors(gameState.poly);
-  gameState.originalArea = polygonArea(gameState.poly);
-  gameState.balls = reconcileBalls(gameState.poly, [], config, gameState.originalArea);
-}
-
-export function getWorld() {
-  return { poly: gameState.poly, scissors: gameState.scissors, rect: gameState.rect };
-}
-
 let lastTime;
 
 function gameLoop(now) {
