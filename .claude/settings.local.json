@@ -8,9 +8,8 @@
       "Bash(npm test:*)",
       "Bash(cd:*)",
       "Bash(npx vitest:*)",
-      "Write(**)",
-      "Edit(**)",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(git:*)"
     ]
   },
   "model": "opusplan"

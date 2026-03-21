@@ -1,8 +1,8 @@
 import { isMobile, computeMobileSizing } from './mobile.js';
 import { initTouch, consumeTouchDelta, setDoubleTapCallback } from './touch.js';
 import { config } from './config.js';
-import { gameState, setState, resetState, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
-import { createInitialRectangle } from './rectangle.js';
+import { createGameState, IDLE, RUNNING, CUTTING, PAUSED, GAME_OVER, WIN } from './state.js';
+export { IDLE, RUNNING };
 import { createPolygonFromRect, polygonArea, raycastToEdge } from './polygon.js';
 import { clearCanvas, drawPolygon, drawScore, drawLiveScore, drawTimer, drawPausedOverlay, drawGameOverMessage, drawWinMessage, drawScissors, drawCutLine, drawPreviewLine, drawBalls } from './renderer.js';
 import { initUI, applyConfigToPanel } from './ui.js';
@@ -42,8 +42,14 @@ function applyMobileSizing() {
   config.cornerSnapDistance = mobileSizing.cornerSnapPx;
 }
 
-let rect, poly, scissors;
+let gameState;
 let pendingDoubleTap = false;
+
+export function setState(newPhase) {
+  gameState.phase = newPhase;
+}
+
+export { gameState };
 
 export function init() {
   canvas = document.getElementById('game-canvas');
@@ -63,28 +69,27 @@ export function init() {
 }
 
 export function resetGameWorld() {
-  resetState(config.timerDuration);
   if (canvas) {
     resizeCanvas();
     applyMobileSizing();
-    rect = createInitialRectangle(config, canvas.width, canvas.height);
   }
-  poly = createPolygonFromRect(rect);
-  scissors = createScissors(poly);
-  gameState.originalArea = polygonArea(poly);
-  gameState.balls = reconcileBalls(poly, [], config, gameState.originalArea);
+  gameState = createGameState(config, canvas);
+  gameState.poly = createPolygonFromRect(gameState.rect);
+  gameState.scissors = createScissors(gameState.poly);
+  gameState.originalArea = polygonArea(gameState.poly);
+  gameState.balls = reconcileBalls(gameState.poly, [], config, gameState.originalArea);
 }
 
 export function initGameWorld(initialRect) {
-  rect = initialRect;
-  poly = createPolygonFromRect(rect);
-  scissors = createScissors(poly);
-  gameState.originalArea = polygonArea(poly);
-  gameState.balls = reconcileBalls(poly, [], config, gameState.originalArea);
+  gameState.rect = initialRect;
+  gameState.poly = createPolygonFromRect(gameState.rect);
+  gameState.scissors = createScissors(gameState.poly);
+  gameState.originalArea = polygonArea(gameState.poly);
+  gameState.balls = reconcileBalls(gameState.poly, [], config, gameState.originalArea);
 }
 
 export function getWorld() {
-  return { poly, scissors, rect };
+  return { poly: gameState.poly, scissors: gameState.scissors, rect: gameState.rect };
 }
 
 let lastTime;
@@ -112,16 +117,16 @@ function gameLoop(now) {
 
 export function update(dt, input) {
   if (input.pausePressed) {
-    if (gameState.state === RUNNING || gameState.state === CUTTING) {
-      gameState.previousState = gameState.state;
-      setState(PAUSED);
-    } else if (gameState.state === PAUSED) {
-      setState(gameState.previousState || RUNNING);
-      gameState.previousState = null;
+    if (gameState.phase === RUNNING || gameState.phase === CUTTING) {
+      gameState.previousPhase = gameState.phase;
+      gameState.phase = PAUSED;
+    } else if (gameState.phase === PAUSED) {
+      gameState.phase = gameState.previousPhase || RUNNING;
+      gameState.previousPhase = null;
     }
   }
 
-  if (gameState.state !== RUNNING && gameState.state !== CUTTING) {
+  if (gameState.phase !== RUNNING && gameState.phase !== CUTTING) {
     return;
   }
 
@@ -132,52 +137,52 @@ export function update(dt, input) {
       gameState.score, false, 0, config.timerDuration,
       gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
     );
-    setState(GAME_OVER);
+    gameState.phase = GAME_OVER;
     return;
   }
 
-  gameState.balls = gameState.balls.map(b => updateBall(b, poly, dt));
+  gameState.balls = gameState.balls.map(b => updateBall(b, gameState.poly, dt));
 
-  if (gameState.state === RUNNING) {
+  if (gameState.phase === RUNNING) {
     if (input.isMobile) {
-      scissors = updateScissorsMovementTouch(scissors, poly, config, input.touchDeltaX);
+      gameState.scissors = updateScissorsMovementTouch(gameState.scissors, gameState.poly, config, input.touchDeltaX);
     } else {
-      scissors = updateScissorsMovement(scissors, poly, dt, config, { left: input.left, right: input.right });
+      gameState.scissors = updateScissorsMovement(gameState.scissors, gameState.poly, dt, config, { left: input.left, right: input.right });
     }
 
     if (input.action) {
-      scissors = initiateCut(scissors, poly);
-      setState(CUTTING);
+      gameState.scissors = initiateCut(gameState.scissors, gameState.poly);
+      gameState.phase = CUTTING;
     }
-  } else if (gameState.state === CUTTING) {
-    scissors = updateScissorsCut(scissors, poly, dt, config);
+  } else if (gameState.phase === CUTTING) {
+    gameState.scissors = updateScissorsCut(gameState.scissors, gameState.poly, dt, config);
 
-    if (checkCutCollision(gameState.balls, scissors)) {
+    if (checkCutCollision(gameState.balls, gameState.scissors)) {
       gameState.failedCuts++;
-      scissors = cancelCut(scissors);
-      setState(RUNNING);
+      gameState.scissors = cancelCut(gameState.scissors);
+      gameState.phase = RUNNING;
       return;
     }
 
-    if (scissors.cutPhase === 1) {
+    if (gameState.scissors.cutPhase === 1) {
       // Player-triggered Phase 2: action (spacebar/double-tap) while in Phase 1
-      const playerTriggered = input.action && canCompleteCut(scissors, poly, config);
+      const playerTriggered = input.action && canCompleteCut(gameState.scissors, gameState.poly, config);
 
       if (playerTriggered) {
-        scissors = triggerPhase2(scissors, poly);
+        gameState.scissors = triggerPhase2(gameState.scissors, gameState.poly);
       } else {
         // Auto: when Phase 1 cut reaches opposite boundary → straight cut
         const hit = raycastToEdge(
-          scissors.cutCurrent.x, scissors.cutCurrent.y,
-          scissors.cutDirection, poly
+          gameState.scissors.cutCurrent.x, gameState.scissors.cutCurrent.y,
+          gameState.scissors.cutDirection, gameState.poly
         );
         const nearBoundary = !hit || hit.distance < 2;
         if (nearBoundary) {
           completeStraightCut();
         }
       }
-    } else if (scissors.cutPhase === 2) {
-      if (checkCutComplete(scissors)) {
+    } else if (gameState.scissors.cutPhase === 2) {
+      if (checkCutComplete(gameState.scissors)) {
         completeCut();
       }
     }
@@ -186,10 +191,10 @@ export function update(dt, input) {
 
 function completeCut() {
   gameState.successfulCuts++;
-  const result = applyCompletedCut(poly, scissors, gameState.originalArea, config);
-  scissors = repositionScissorsAfterCut(scissors, result.newPoly);
-  poly = result.newPoly;
-  gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
+  const result = applyCompletedCut(gameState.poly, gameState.scissors, gameState.originalArea, config);
+  gameState.scissors = repositionScissorsAfterCut(gameState.scissors, result.newPoly);
+  gameState.poly = result.newPoly;
+  gameState.balls = reconcileBalls(gameState.poly, gameState.balls, config, gameState.originalArea);
   gameState.score = result.score;
   drawScore(gameState.score);
   if (result.won) {
@@ -197,18 +202,18 @@ function completeCut() {
       gameState.score, true, gameState.timeRemaining, config.timerDuration,
       gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
     );
-    setState(WIN);
+    gameState.phase = WIN;
     return;
   }
-  setState(RUNNING);
+  gameState.phase = RUNNING;
 }
 
 function completeStraightCut() {
   gameState.successfulCuts++;
-  const result = applyStraightCut(poly, scissors, gameState.originalArea, config);
-  scissors = repositionScissorsAfterCut(scissors, result.newPoly, result.exitPoint);
-  poly = result.newPoly;
-  gameState.balls = reconcileBalls(poly, gameState.balls, config, gameState.originalArea);
+  const result = applyStraightCut(gameState.poly, gameState.scissors, gameState.originalArea, config);
+  gameState.scissors = repositionScissorsAfterCut(gameState.scissors, result.newPoly, result.exitPoint);
+  gameState.poly = result.newPoly;
+  gameState.balls = reconcileBalls(gameState.poly, gameState.balls, config, gameState.originalArea);
   gameState.score = result.score;
   drawScore(gameState.score);
   if (result.won) {
@@ -216,19 +221,19 @@ function completeStraightCut() {
       gameState.score, true, gameState.timeRemaining, config.timerDuration,
       gameState.successfulCuts, gameState.failedCuts, config.winThreshold, config.failPenalty
     );
-    setState(WIN);
+    gameState.phase = WIN;
     return;
   }
-  setState(RUNNING);
+  gameState.phase = RUNNING;
 }
 
 function render() {
   clearCanvas(ctx, canvas);
-  drawPolygon(ctx, poly);
+  drawPolygon(ctx, gameState.poly);
   drawBalls(ctx, gameState.balls);
-  drawCutLine(ctx, scissors);
-  drawPreviewLine(ctx, scissors, poly);
-  drawScissors(ctx, scissors, poly);
+  drawCutLine(ctx, gameState.scissors);
+  drawPreviewLine(ctx, gameState.scissors, gameState.poly);
+  drawScissors(ctx, gameState.scissors, gameState.poly);
   drawTimer(gameState.timeRemaining);
   const liveScore = calculateScore(
     gameState.score, false, gameState.timeRemaining, config.timerDuration,
@@ -236,11 +241,11 @@ function render() {
   );
   drawLiveScore(liveScore);
 
-  if (gameState.state === PAUSED) {
+  if (gameState.phase === PAUSED) {
     drawPausedOverlay(ctx, canvas);
-  } else if (gameState.state === GAME_OVER) {
+  } else if (gameState.phase === GAME_OVER) {
     drawGameOverMessage(ctx, canvas, gameState.score, gameState.finalScore);
-  } else if (gameState.state === WIN) {
+  } else if (gameState.phase === WIN) {
     drawWinMessage(ctx, canvas, gameState.score, gameState.finalScore);
   }
 }

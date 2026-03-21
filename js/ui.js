@@ -1,4 +1,4 @@
-import { gameState, setState, IDLE, RUNNING } from './state.js';
+import { gameState, setState, IDLE, RUNNING } from './main.js';
 import { config, DEFAULTS, MOBILE_DEFAULTS } from './config.js';
 import { drawScore, drawLiveScore, drawTimer } from './renderer.js';
 import { isMobile } from './mobile.js';
@@ -92,7 +92,7 @@ export function initUI(resetCallback) {
 }
 
 function handleStart() {
-  if (gameState.state === IDLE) {
+  if (gameState.phase === IDLE) {
     setState(RUNNING);
     document.getElementById('btn-start').disabled = true;
   }
@@ -107,7 +107,7 @@ function handleReset(resetCallback) {
 }
 
 function handleConfig() {
-  if (gameState.state !== IDLE) return;
+  if (gameState.phase !== IDLE) return;
   applyConfigToPanel();
   document.getElementById('config-panel').classList.remove('hidden');
 }

@@ -5,27 +5,29 @@ export const CUTTING = 'CUTTING';
 export const GAME_OVER = 'GAME_OVER';
 export const WIN = 'WIN';
 
-export const gameState = {
-  state: IDLE,
-  previousState: null,
-  score: 100,
-  originalArea: 0,
-  timeRemaining: 180,
-  balls: [],
-  successfulCuts: 0,
-  failedCuts: 0,
-  finalScore: null,
-};
-
-export function setState(newState) {
-  gameState.state = newState;
+function createInitialRectangle(config, canvasWidth, canvasHeight) {
+  return {
+    x: (canvasWidth - config.rectWidth) / 2,
+    y: (canvasHeight - config.rectHeight) / 2,
+    width: config.rectWidth,
+    height: config.rectHeight,
+  };
 }
 
-export function resetState(timerDuration) {
-  gameState.state = IDLE;
-  gameState.score = 100;
-  gameState.timeRemaining = timerDuration;
-  gameState.successfulCuts = 0;
-  gameState.failedCuts = 0;
-  gameState.finalScore = null;
+export function createGameState(config, canvas) {
+  const rect = canvas ? createInitialRectangle(config, canvas.width, canvas.height) : null;
+  return {
+    phase: IDLE,
+    previousPhase: null,
+    score: 100,
+    originalArea: 0,
+    timeRemaining: config.timerDuration,
+    balls: [],
+    successfulCuts: 0,
+    failedCuts: 0,
+    finalScore: null,
+    scissors: null,
+    poly: null,
+    rect,
+  };
 }
